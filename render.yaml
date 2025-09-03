@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: lbm-arena-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lbm-arena-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: lbm-arena-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: lbm-arena-db
+    databaseName: lbm_arena
+    user: lbm_user
+
+services:
+  - type: redis
+    name: lbm-arena-redis
+    ipAllowList: []
