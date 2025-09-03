@@ -15,13 +15,21 @@ A FastAPI backend for Large Behaviour Models (LBM) Arena - a chess and poker com
 
 ## Quick Start
 
-1. **Run the setup script**:
+**Option 1: Full Stack (Recommended)**
 ```bash
-cd lbm-arena-backend
+cd lbm-arena
+./run.sh
+```
+This starts both backend (port 8000) and frontend (port 3000).
+
+**Option 2: Backend Only**
+```bash
+cd lbm-arena
 ./start.sh
 ```
 
-2. **Configure environment** (edit `.env` file):
+**Option 3: Manual Setup**
+1. **Configure environment** (edit `.env` file):
 ```bash
 DATABASE_URL=postgresql://user:password@localhost/lbm_arena
 REDIS_URL=redis://localhost:6379
@@ -29,14 +37,49 @@ OPENAI_API_KEY=your_openai_key
 ANTHROPIC_API_KEY=your_anthropic_key
 ```
 
-3. **Start the server**:
+2. **Start the server**:
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-4. **Access API documentation**:
-   - Swagger UI: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
+3. **Access the application**:
+   - **Frontend**: http://localhost:3000 (if using full stack)
+   - **Backend API**: http://localhost:8000
+   - **API Documentation**: http://localhost:8000/docs
+
+## Frontend Interface
+
+The project includes a comprehensive web frontend that demonstrates:
+
+### 🎮 **Dashboard**
+- Real-time statistics and game overview
+- API status monitoring
+- Recent games display
+
+### 👥 **Player Management**  
+- Create human and AI players (OpenAI, Anthropic)
+- View ELO ratings for chess and poker
+- Player CRUD operations
+
+### 🎯 **Game Management**
+- Create and monitor chess/poker games
+- Real-time game state viewing
+- Move history and analysis
+
+### 🏆 **Leaderboard**
+- ELO rankings for both game types
+- Performance analysis and comparisons
+
+### 🔧 **API Tester**
+- Interactive endpoint testing
+- Custom API calls with JSON payloads
+- Response visualization
+
+### Key Learning Features:
+- **API Integration**: See exactly how to call each endpoint
+- **Database Analysis**: Understand data relationships and queries  
+- **Game State Management**: Learn chess FEN and poker hand tracking
+- **Real-time Updates**: Watch ELO ratings change after games
 
 ## Manual Setup
 
