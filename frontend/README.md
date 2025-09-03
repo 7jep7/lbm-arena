@@ -4,9 +4,9 @@ Simple frontend to test and verify the backend API functionality.
 
 ## Quick Start
 
-1. Start backend: `./run.sh` from root directory
-2. Open `index.html` in browser
-3. Click "Run Full API Test Suite" to verify everything works
+1. Start both: `./dev.sh` from root directory
+2. Visit: http://localhost:3000
+3. Click "Run All Tests" to verify everything works
 
 ## How to Use
 

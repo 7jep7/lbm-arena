@@ -5,7 +5,7 @@ psycopg2-binary==2.9.9
 redis==5.0.1
 pydantic==1.10.12
 python-chess==1.999
-treys==0.1.2
+treys==0.1.8
 openai==0.28.1
 anthropic==0.7.7
 python-multipart==0.0.6

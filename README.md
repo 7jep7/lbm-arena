@@ -15,17 +15,21 @@ A FastAPI backend for Large Behaviour Models (LBM) Arena - a chess and poker com
 
 ## Quick Start
 
-**Option 1: Full Stack (Recommended)**
+**One Command Start (Recommended)**
 ```bash
-cd lbm-arena
-./run.sh
+./dev.sh
 ```
-This starts both backend (port 8000) and frontend (port 3000).
+This starts both backend (port 8000) and frontend (port 3000) for easy testing.
 
-**Option 2: Backend Only**
+**Manual Setup**
 ```bash
-cd lbm-arena
-./start.sh
+# Backend only
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+# Frontend (separate terminal)
+cd frontend && python3 -m http.server 3000
 ```
 
 **Option 3: Manual Setup**
