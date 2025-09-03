@@ -1,263 +1,74 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LBM Arena - Frontend</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>LBM Arena - API Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        button { padding: 10px; margin: 5px; background: #007acc; color: white; border: none; cursor: pointer; }
+        .output { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; max-height: 200px; overflow-y: auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+    </style>
 </head>
 <body>
-    <header>
-        <h1><i class="fas fa-robot"></i> LBM Arena</h1>
-        <p>Large Behaviour Models Chess & Poker Competition</p>
-        <div class="api-status">
-            <span id="api-status">API: <span id="status-indicator">Checking...</span></span>
-        </div>
-    </header>
-
-    <nav>
-        <button class="tab-btn active" onclick="showTab('dashboard')">
-            <i class="fas fa-tachometer-alt"></i> Dashboard
-        </button>
-        <button class="tab-btn" onclick="showTab('players')">
-            <i class="fas fa-users"></i> Players
-        </button>
-        <button class="tab-btn" onclick="showTab('games')">
-            <i class="fas fa-gamepad"></i> Games
-        </button>
-        <button class="tab-btn" onclick="showTab('leaderboard')">
-            <i class="fas fa-trophy"></i> Leaderboard
-        </button>
-        <button class="tab-btn" onclick="showTab('api-tester')">
-            <i class="fas fa-code"></i> API Tester
-        </button>
-    </nav>
-
-    <main>
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <h2>Dashboard</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-info">
-                        <h3 id="total-players">-</h3>
-                        <p>Total Players</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-gamepad"></i></div>
-                    <div class="stat-info">
-                        <h3 id="total-games">-</h3>
-                        <p>Total Games</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-chess"></i></div>
-                    <div class="stat-info">
-                        <h3 id="chess-games">-</h3>
-                        <p>Chess Games</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-spade"></i></div>
-                    <div class="stat-info">
-                        <h3 id="poker-games">-</h3>
-                        <p>Poker Games</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="recent-section">
-                <h3>Recent Games</h3>
-                <div id="recent-games" class="game-list">
-                    <!-- Recent games will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Players Tab -->
-        <div id="players" class="tab-content">
-            <div class="section-header">
-                <h2>Players Management</h2>
-                <button class="btn btn-primary" onclick="showCreatePlayerForm()">
-                    <i class="fas fa-plus"></i> Add Player
-                </button>
-            </div>
-
-            <div id="create-player-form" class="form-container" style="display: none;">
-                <h3>Create New Player</h3>
-                <form onsubmit="createPlayer(event)">
-                    <div class="form-group">
-                        <label>Display Name:</label>
-                        <input type="text" id="player-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Player Type:</label>
-                        <select id="player-type" onchange="toggleProviderFields()">
-                            <option value="human">Human</option>
-                            <option value="ai">AI Model</option>
-                        </select>
-                    </div>
-                    <div id="ai-fields" style="display: none;">
-                        <div class="form-group">
-                            <label>Provider:</label>
-                            <select id="provider">
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Model ID:</label>
-                            <input type="text" id="model-id" placeholder="e.g., gpt-4, claude-3">
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Create Player</button>
-                        <button type="button" class="btn btn-secondary" onclick="hideCreatePlayerForm()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-
-            <div id="players-list" class="players-grid">
-                <!-- Players will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Games Tab -->
-        <div id="games" class="tab-content">
-            <div class="section-header">
-                <h2>Games Management</h2>
-                <button class="btn btn-primary" onclick="showCreateGameForm()">
-                    <i class="fas fa-plus"></i> New Game
-                </button>
-            </div>
-
-            <div id="create-game-form" class="form-container" style="display: none;">
-                <h3>Create New Game</h3>
-                <form onsubmit="createGame(event)">
-                    <div class="form-group">
-                        <label>Game Type:</label>
-                        <select id="game-type">
-                            <option value="chess">Chess</option>
-                            <option value="poker">Poker</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Select Players:</label>
-                        <div id="player-selection" class="player-selection">
-                            <!-- Available players will be loaded here -->
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Create Game</button>
-                        <button type="button" class="btn btn-secondary" onclick="hideCreateGameForm()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="games-filter">
-                <select id="game-filter" onchange="filterGames()">
-                    <option value="all">All Games</option>
-                    <option value="chess">Chess Only</option>
-                    <option value="poker">Poker Only</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                </select>
-            </div>
-
-            <div id="games-list" class="games-grid">
-                <!-- Games will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Leaderboard Tab -->
-        <div id="leaderboard" class="tab-content">
-            <h2>Leaderboard</h2>
-            <div class="leaderboard-tabs">
-                <button class="tab-btn active" onclick="showLeaderboard('chess')">Chess ELO</button>
-                <button class="tab-btn" onclick="showLeaderboard('poker')">Poker ELO</button>
-            </div>
-            
-            <div id="chess-leaderboard" class="leaderboard-content">
-                <h3>Chess Rankings</h3>
-                <div id="chess-rankings" class="rankings-list">
-                    <!-- Chess rankings will be loaded here -->
-                </div>
-            </div>
-            
-            <div id="poker-leaderboard" class="leaderboard-content" style="display: none;">
-                <h3>Poker Rankings</h3>
-                <div id="poker-rankings" class="rankings-list">
-                    <!-- Poker rankings will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- API Tester Tab -->
-        <div id="api-tester" class="tab-content">
-            <h2>API Tester</h2>
-            <p>Test and explore the backend API endpoints</p>
-            
-            <div class="api-section">
-                <h3>Quick Actions</h3>
-                <div class="api-actions">
-                    <button class="btn btn-info" onclick="testEndpoint('GET', '/health')">
-                        <i class="fas fa-heartbeat"></i> Health Check
-                    </button>
-                    <button class="btn btn-info" onclick="testEndpoint('GET', '/api/v1/players')">
-                        <i class="fas fa-users"></i> Get Players
-                    </button>
-                    <button class="btn btn-info" onclick="testEndpoint('GET', '/api/v1/games')">
-                        <i class="fas fa-gamepad"></i> Get Games
-                    </button>
-                </div>
-            </div>
-
-            <div class="api-section">
-                <h3>Custom API Call</h3>
-                <div class="api-form">
-                    <div class="form-group">
-                        <label>Method:</label>
-                        <select id="api-method">
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="PUT">PUT</option>
-                            <option value="DELETE">DELETE</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Endpoint:</label>
-                        <input type="text" id="api-endpoint" placeholder="/api/v1/...">
-                    </div>
-                    <div class="form-group">
-                        <label>Request Body (JSON):</label>
-                        <textarea id="api-body" rows="4" placeholder='{"key": "value"}'></textarea>
-                    </div>
-                    <button class="btn btn-primary" onclick="makeCustomApiCall()">
-                        <i class="fas fa-paper-plane"></i> Send Request
-                    </button>
-                </div>
-            </div>
-
-            <div class="api-section">
-                <h3>Response</h3>
-                <pre id="api-response">No request made yet...</pre>
-            </div>
-        </div>
-    </main>
-
-    <!-- Game Detail Modal -->
-    <div id="game-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeGameModal()">&times;</span>
-            <div id="game-detail">
-                <!-- Game details will be loaded here -->
-            </div>
-        </div>
+    <h1>LBM Arena - API Testing</h1>
+    
+    <div class="section">
+        <h3>Quick Tests</h3>
+        <button onclick="testHealth()">Health Check</button>
+        <button onclick="testModels()">List Models</button>
+        <button onclick="testGames()">List Games</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="output" class="output">Click buttons to test API...</div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        const API = 'http://localhost:8000';
+        
+        async function apiCall(endpoint) {
+            try {
+                const response = await fetch(API + endpoint);
+                const data = await response.json();
+                return { success: response.ok, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function showResult(result) {
+            document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+        }
+        
+        async function testHealth() {
+            const result = await apiCall('/health');
+            showResult(result);
+        }
+        
+        async function testModels() {
+            const result = await apiCall('/models');
+            showResult(result);
+        }
+        
+        async function testGames() {
+            const result = await apiCall('/games');
+            showResult(result);
+        }
+        
+        async function runAllTests() {
+            const tests = [
+                { name: 'Health', endpoint: '/health' },
+                { name: 'Models', endpoint: '/models' },
+                { name: 'Games', endpoint: '/games' },
+                { name: 'Stats', endpoint: '/stats' }
+            ];
+            
+            let results = [];
+            for (const test of tests) {
+                const result = await apiCall(test.endpoint);
+                results.push(`${test.name}: ${result.success ? 'PASS' : 'FAIL'}`);
+            }
+            
+            document.getElementById('output').textContent = results.join('\n');
+        }
+    </script>
 </body>
 </html>
