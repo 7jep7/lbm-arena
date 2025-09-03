@@ -15,21 +15,32 @@ A FastAPI backend for Large Behaviour Models (LBM) Arena - a chess and poker com
 
 ## Quick Start
 
-**One Command Start (Recommended)**
+**One Command Start (Conda - Recommended)**
 ```bash
 ./dev.sh
 ```
-This starts both backend (port 8000) and frontend (port 3000) for easy testing.
+Creates conda environment on big partition (`/mnt/nvme0n1p8/conda-envs/lbm-arena`) and starts both backend (port 8000) and frontend (port 3000).
 
-**Manual Setup**
+**Manual Conda Setup**
 ```bash
-# Backend only
+# Create environment on big partition
+conda env create -f environment.yml -p /mnt/nvme0n1p8/conda-envs/lbm-arena
+conda activate /mnt/nvme0n1p8/conda-envs/lbm-arena
+
+# Start backend
+uvicorn app.main:app --reload
+
+# Start frontend (separate terminal) 
+cd frontend && python3 -m http.server 3000
+```
+
+**Legacy venv Setup**
+```bash
+# If you prefer venv instead of conda
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-
-# Frontend (separate terminal)
-cd frontend && python3 -m http.server 3000
 ```
 
 **Option 3: Manual Setup**

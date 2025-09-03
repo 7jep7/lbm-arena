@@ -1,16 +1,45 @@
 #!/bin/bash
 
-echo "🎮 LBM Arena - Quick Start"
-echo "=========================="
+echo "🎮 LBM Arena - Quick Start (Conda)"
+echo "=================================="
 
-# Setup backend
-if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
-    python3 -m venv venv
+# Set conda environment path on the big partition
+CONDA_ENV_PATH="/mnt/nvme0n1p8/conda-envs/lbm-arena"
+CONDA_ENV_NAME="lbm-arena"
+
+# Initialize conda for this shell
+source "$(conda info --base)/etc/profile.d/conda.sh"
+
+# Check if conda environment exists
+if [ ! -d "$CONDA_ENV_PATH" ]; then
+    echo "📦 Creating conda environment on big partition..."
+    echo "   Location: $CONDA_ENV_PATH"
+    
+    # Option 1: Create from environment.yml (recommended)
+    if [ -f "environment.yml" ]; then
+        conda env create -f environment.yml -p "$CONDA_ENV_PATH"
+    else
+        # Option 2: Create basic environment and use pip
+        conda create -p "$CONDA_ENV_PATH" python=3.11 -y
+        conda activate "$CONDA_ENV_PATH"
+        pip install -r requirements.txt
+    fi
+else
+    echo "� Using existing conda environment..."
+    conda activate "$CONDA_ENV_PATH"
 fi
 
-source venv/bin/activate
-pip install -q -r requirements.txt
+# Ensure environment is activated
+if [[ "$CONDA_PREFIX" != "$CONDA_ENV_PATH" ]]; then
+    echo "🔄 Activating conda environment..."
+    conda activate "$CONDA_ENV_PATH"
+fi
+
+# Install/update dependencies if using pip method
+if [ -f "requirements.txt" ] && [ ! -f "environment.yml" ]; then
+    echo "📦 Installing/updating dependencies..."
+    pip install -q -r requirements.txt
+fi
 
 # Create .env if needed
 if [ ! -f ".env" ]; then
