@@ -1,17 +1,12 @@
-import openai
+from openai import OpenAI
 import anthropic
 from typing import Optional, Dict, Any, List
 from app.core.config import settings
 
 class LLMService:
     def __init__(self):
-        if settings.openai_api_key:
-            openai.api_key = settings.openai_api_key
-        
-        if settings.anthropic_api_key:
-            self.anthropic_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        else:
-            self.anthropic_client = None
+        self.openai_client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+        self.anthropic_client = anthropic.Anthropic(api_key=settings.anthropic_api_key) if settings.anthropic_api_key else None
     
     async def get_chess_move(self, provider: str, model_id: str, game_state: Dict[str, Any], player_color: str) -> str:
         """Get a chess move from an LLM"""
@@ -89,11 +84,11 @@ Respond with a JSON object like:
     
     async def _get_openai_response(self, model_id: str, prompt: str, valid_options: Optional[List[str]] = None) -> str:
         """Get response from OpenAI API"""
-        if not settings.openai_api_key:
+        if not self.openai_client:
             raise ValueError("OpenAI API key not configured")
         
         try:
-            response = openai.ChatCompletion.create(
+            response = self.openai_client.chat.completions.create(
                 model=model_id,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=100,

@@ -17,7 +17,7 @@ class Move(Base):
     
     # Relationships
     game = relationship("Game", back_populates="moves")
-    player = relationship("Player")
+    player = relationship("Player", back_populates="moves")
     
     def __repr__(self):
         return f"<Move(id={self.id}, game_id={self.game_id}, notation='{self.notation}')>"
@@ -34,8 +34,8 @@ class GamePlayer(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    game = relationship("Game", back_populates="players")
-    player = relationship("Player")
+    game = relationship("Game", back_populates="game_players")
+    player = relationship("Player", back_populates="game_players")
     
     def __repr__(self):
         return f"<GamePlayer(game_id={self.game_id}, player_id={self.player_id}, position='{self.position}')>"

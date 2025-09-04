@@ -32,7 +32,8 @@ class Game(Base):
     player1 = relationship("Player", foreign_keys=[player1_id])
     player2 = relationship("Player", foreign_keys=[player2_id])
     winner = relationship("Player", foreign_keys=[winner_id])
-    # moves = relationship("Move", back_populates="game")  # Commented out for now
+    moves = relationship("Move", back_populates="game", cascade="all, delete-orphan")
+    game_players = relationship("GamePlayer", back_populates="game", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Game(id={self.id}, type='{self.game_type}', status='{self.status}')>"
