@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LBM Arena - API Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        button { padding: 10px; margin: 5px; background: #007acc; color: white; border: none; cursor: pointer; }
+        .output { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; max-height: 200px; overflow-y: auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>LBM Arena - API Testing</h1>
+    
+    <div class="section">
+        <h3>Quick Tests</h3>
+        <button onclick="testHealth()">Health Check</button>
+        <button onclick="testModels()">List Players</button>
+        <button onclick="testGames()">List Games</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="output" class="output">Click buttons to test API...</div>
+    </div>
+
+    <script>
+        // Auto-detect API URL based on environment
+        const API = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000' 
+            : 'https://lbm-arena-backend.onrender.com';
+        
+        // Display current API endpoint
+        console.log('Using API endpoint:', API);
+        
+        async function apiCall(endpoint) {
+            try {
+                const response = await fetch(API + endpoint);
+                const data = await response.json();
+                return { success: response.ok, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function showResult(result) {
+            document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+        }
+        
+        async function testHealth() {
+            const result = await apiCall('/health');
+            showResult(result);
+        }
+        
+        async function testModels() {
+            const result = await apiCall('/api/v1/players');
+            showResult(result);
+        }
+        
+        async function testGames() {
+            const result = await apiCall('/api/v1/games');
+            showResult(result);
+        }
+        
+        async function runAllTests() {
+            const tests = [
+                { name: 'Health', endpoint: '/health' },
+                { name: 'Players', endpoint: '/api/v1/players' },
+                { name: 'Games', endpoint: '/api/v1/games' },
+                { name: 'Chess', endpoint: '/api/v1/chess' }
+            ];
+            
+            let results = [];
+            for (const test of tests) {
+                const result = await apiCall(test.endpoint);
+                results.push(`${test.name}: ${result.success ? 'PASS' : 'FAIL'}`);
+            }
+            
+            document.getElementById('output').textContent = results.join('\n');
+        }
+    </script>
+</body>
+</html>

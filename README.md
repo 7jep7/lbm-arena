@@ -15,13 +15,32 @@ A FastAPI backend for Large Behaviour Models (LBM) Arena - a chess and poker com
 
 ## Quick Start
 
-1. **Run the setup script**:
+**Development Mode (Conda - Recommended)**
 ```bash
-cd lbm-arena-backend
-./start.sh
+./dev/dev.sh
+```
+Creates conda environment on big partition (`/mnt/nvme0n1p8/conda-envs/lbm-arena`) and starts both backend (port 8000) and frontend (port 3000).
+
+**Development Mode (Legacy venv)**
+```bash
+./dev/run.sh
 ```
 
-2. **Configure environment** (edit `.env` file):
+**Manual Development Setup**
+```bash
+# Create environment on big partition
+conda env create -f environment.yml -p /mnt/nvme0n1p8/conda-envs/lbm-arena
+conda activate /mnt/nvme0n1p8/conda-envs/lbm-arena
+
+# Start backend
+uvicorn app.main:app --reload
+
+# Start frontend (separate terminal) 
+cd frontend && python3 -m http.server 3000
+```
+
+**Option 3: Manual Setup**
+1. **Configure environment** (edit `.env` file):
 ```bash
 DATABASE_URL=postgresql://user:password@localhost/lbm_arena
 REDIS_URL=redis://localhost:6379
@@ -29,14 +48,49 @@ OPENAI_API_KEY=your_openai_key
 ANTHROPIC_API_KEY=your_anthropic_key
 ```
 
-3. **Start the server**:
+2. **Start the server**:
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-4. **Access API documentation**:
-   - Swagger UI: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
+3. **Access the application**:
+   - **Frontend**: http://localhost:3000 (if using full stack)
+   - **Backend API**: http://localhost:8000
+   - **API Documentation**: http://localhost:8000/docs
+
+## Frontend Interface
+
+The project includes a comprehensive web frontend that demonstrates:
+
+### 🎮 **Dashboard**
+- Real-time statistics and game overview
+- API status monitoring
+- Recent games display
+
+### 👥 **Player Management**  
+- Create human and AI players (OpenAI, Anthropic)
+- View ELO ratings for chess and poker
+- Player CRUD operations
+
+### 🎯 **Game Management**
+- Create and monitor chess/poker games
+- Real-time game state viewing
+- Move history and analysis
+
+### 🏆 **Leaderboard**
+- ELO rankings for both game types
+- Performance analysis and comparisons
+
+### 🔧 **API Tester**
+- Interactive endpoint testing
+- Custom API calls with JSON payloads
+- Response visualization
+
+### Key Learning Features:
+- **API Integration**: See exactly how to call each endpoint
+- **Database Analysis**: Understand data relationships and queries  
+- **Game State Management**: Learn chess FEN and poker hand tracking
+- **Real-time Updates**: Watch ELO ratings change after games
 
 ## Manual Setup
 
@@ -61,12 +115,16 @@ cp .env.example .env
 
 4. **Create database tables**:
 ```bash
-python create_db.py
+# Production-safe (creates tables only, no test data)
+python scripts/init_db_safe.py
+
+# OR for development with test data
+python dev/scripts/setup_complete_db.py
 ```
 
 5. **Run tests**:
 ```bash
-python test_setup.py
+python dev/scripts/test_setup.py
 ```
 
 ## API Endpoints
@@ -165,18 +223,37 @@ AI models are prompted with:
 
 ### Project Structure
 ```
-lbm-arena-backend/
-├── app/
-│   ├── core/          # Configuration, database, redis
-│   ├── models/        # SQLAlchemy models
-│   ├── schemas/       # Pydantic schemas
-│   ├── api/v1/        # API endpoints
-│   └── services/      # Business logic
-├── requirements.txt   # Dependencies
-├── create_db.py      # Database setup
-├── test_setup.py     # Setup validation
-└── start.sh          # Quick start script
+lbm-arena/
+├── app/                    # 🚀 Production Application
+│   ├── core/              # Configuration, database, redis
+│   ├── models/            # SQLAlchemy models
+│   ├── schemas/           # Pydantic schemas
+│   ├── api/v1/            # API endpoints
+│   └── services/          # Business logic
+├── frontend/              # 🌐 Production Frontend
+├── scripts/               # 🔒 Production-Safe Scripts
+│   ├── init_db_safe.py    # Safe DB initialization (used in build.sh)
+│   └── verify_deployment.py # Deployment verification
+├── dev/                   # 🛠️ Development Tools Only
+│   ├── scripts/           # Development database scripts
+│   │   ├── setup_complete_db.py  # ⚠️ Drops all data! Full reset
+│   │   ├── recreate_db.py        # ⚠️ Drops tables! Fresh schema
+│   │   ├── add_test_data.py      # Add sample data
+│   │   └── test_setup.py         # Test database setup
+│   ├── dev.sh             # Quick development start (conda)
+│   ├── run.sh             # Development environment setup
+│   └── cleanup.sh         # Environment cleanup
+├── requirements.txt       # Dependencies
+├── environment.yml        # Conda environment
+├── build.sh              # Production build script
+└── render.yaml           # Deployment configuration
 ```
+
+**🔒 Production vs Development**
+- **Production**: Uses only `scripts/init_db_safe.py` - never overwrites data
+- **Development**: Uses `dev/scripts/*` - includes destructive operations for testing
+
+**⚠️ Important**: Never use `dev/` scripts in production! They can delete all your data.
 
 ### Adding New Games
 1. Create service in `app/services/`
@@ -187,8 +264,8 @@ lbm-arena-backend/
 
 ### Testing
 ```bash
-python test_setup.py  # Basic setup tests
-pytest                # Full test suite (when implemented)
+python dev/scripts/test_setup.py  # Basic setup tests
+pytest                            # Full test suite (when implemented)
 ```
 
 ## Deployment

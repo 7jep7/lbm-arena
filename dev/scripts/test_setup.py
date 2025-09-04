@@ -1,5 +1,9 @@
 """
-Simple test script to verify the LBM Arena backend setup
+import sys
+import os
+
+# Add project root to Python path (dev/scripts -> dev -> root)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))e test script to verify the LBM Arena backend setup
 """
 
 import sys
