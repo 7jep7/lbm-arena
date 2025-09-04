@@ -1,66 +1,46 @@
-# Scripts - Testing & Debugging Utilities
+# Production Scripts
 
-This folder contains utility scripts for testing, debugging, and database management.
+This folder contains **production-safe** scripts for LBM Arena.
 
-## Database Scripts
+## Production Scripts
 
-### `create_db.py`
-Creates all database tables in Supabase.
-```bash
-python scripts/create_db.py
-```
+### `init_db_safe.py`
+- **Purpose**: Safe database initialization for production
+- **Behavior**: Creates tables if they don't exist, never adds test data
+- **Usage**: Automatically used during deployment via `build.sh`
+- **Safety**: ✅ Production safe - will not overwrite or modify existing data
 
-### `add_test_data.py` 
-Adds initial test data (players and games) if database is empty.
-```bash
-python scripts/add_test_data.py
-```
+### `verify_deployment.py`
+- **Purpose**: Verify deployment is working correctly
+- **Behavior**: Tests API endpoints to ensure they respond correctly
+- **Usage**: Can be run after deployment to verify everything works
+- **Safety**: ✅ Read-only operations, no data modification
 
-### `add_two_players.py`
-Adds 2 additional players to existing database.
-```bash
-python scripts/add_two_players.py
-```
+## Development Scripts
 
-### `reset_test_data.py`
-Clears all data and adds fresh test data (6 players, 5 games).
-```bash
-python scripts/reset_test_data.py
-```
+For development and testing scripts, see the `dev/` folder.
 
-## Testing Scripts
+⚠️ **Never use development scripts in production!** They can delete data and overwrite your database.
 
-### `test_setup.py`
-Tests basic imports and environment setup.
-```bash
-python scripts/test_setup.py
-```
+## Usage in Production
 
-## Usage
+The production deployment automatically uses `init_db_safe.py` through the build process defined in `build.sh`. This ensures:
 
-All scripts should be run from the project root directory with the conda environment activated:
+- Tables are created if missing
+- No test data is added
+- Existing data is never touched
+- Database starts empty and grows through user interactions
+
+## Manual Usage
+
+If you need to manually initialize the database in production:
 
 ```bash
-# Activate environment
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate /mnt/nvme0n1p8/conda-envs/lbm-arena
-
-# Run any script
-python scripts/script_name.py
+python scripts/init_db_safe.py
 ```
 
-## Current Database State
+To verify a deployment:
 
-After running `add_two_players.py`, the database contains:
-
-**Players (6 total):**
-- GPT-4 (OpenAI)
-- Claude-3 (Anthropic) 
-- GPT-3.5 (OpenAI)
-- Test-Bot (Custom)
-- Gemini-Pro (Google) 
-- LLaMA-2 (Meta)
-
-**Games (3+ total):**
-- Various chess and poker games between the players
-- Mix of completed and in-progress games
+```bash
+python scripts/verify_deployment.py
+```

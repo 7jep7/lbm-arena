@@ -22,7 +22,13 @@
     </div>
 
     <script>
-        const API = 'http://localhost:8000';
+        // Auto-detect API URL based on environment
+        const API = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000' 
+            : 'https://lbm-arena-backend.onrender.com';
+        
+        // Display current API endpoint
+        console.log('Using API endpoint:', API);
         
         async function apiCall(endpoint) {
             try {

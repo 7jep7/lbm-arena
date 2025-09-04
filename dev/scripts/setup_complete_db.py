@@ -1,10 +1,22 @@
 """
+⚠️  WARNING: DEVELOPMENT ONLY SCRIPT ⚠️
 Complete database setup with proper relationships and rich test data
+
+🔴 THIS SCRIPT DROPS ALL EXISTING DATA! 🔴
+- Only use for local development and testing
+- Never run this in production
+- For production deployments, use init_db_safe.py instead
+
+This script will:
+1. DROP all existing tables and data
+2. CREATE fresh tables
+3. ADD comprehensive test data
 """
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the project root to the path (two levels up from dev/scripts/)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal, engine, Base

@@ -4,7 +4,7 @@ Simple frontend to test and verify the backend API functionality.
 
 ## Quick Start
 
-1. Start both: `./dev.sh` from root directory
+1. Start both: `./dev/dev.sh` from root directory
 2. Visit: http://localhost:3000
 3. Click "Run All Tests" to verify everything works
 
@@ -13,7 +13,7 @@ Simple frontend to test and verify the backend API functionality.
 ### 1. Start the Backend
 ```bash
 # From the root directory
-./run.sh
+./dev/run.sh
 # OR manually:
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```

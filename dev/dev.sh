@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Change to project root directory (one level up from dev/)
+cd "$(dirname "$0")/.."
+
 echo "🎮 LBM Arena - Quick Start (Conda)"
 echo "=================================="
 
