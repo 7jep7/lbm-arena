@@ -10,7 +10,7 @@ Tests database-level functionality including:
 """
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 from tests.utils.helpers import DatabaseTestHelper
 from tests.utils.factories import PlayerFactory
@@ -111,10 +111,12 @@ class TestDatabaseConstraints:
         db_session.add_all([player1, player2])
         db_session.commit()
         
-        # Create game
+        # Create game with required player IDs
         game = GameModel(
             game_type="chess",
             status=GameStatus.IN_PROGRESS,
+            player1_id=player1.id,
+            player2_id=player2.id,
             initial_state='{"board_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}',
             current_state='{"board_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}'
         )
@@ -135,11 +137,15 @@ class TestDatabaseConstraints:
         
         db_session.add_all([game_player1, game_player2])
         db_session.commit()
-        
-        # Verify relationships
-        assert len(game.players) == 2
-        assert game_player1.player.display_name == player1_data["display_name"]
-        assert game_player2.player.display_name == player2_data["display_name"]
+
+        # Verify relationships using defined attributes (inside function)
+        assert game.player1_id == player1.id
+        assert game.player2_id == player2.id
+        # Verify GamePlayer join entries
+        gp_entries = db_session.query(GamePlayerModel).filter(GamePlayerModel.game_id == game.id).all()
+        assert len(gp_entries) == 2
+        ids = {gp.player_id for gp in gp_entries}
+        assert {player1.id, player2.id} == ids
     
     def test_move_foreign_key_constraints(self, db_session: Session):
         """Test foreign key constraints for moves"""
@@ -201,12 +207,18 @@ class TestDatabaseQueries:
             game, _ = helper.create_game_with_players([player1, player2])
         
         # Query player game counts
+        game_count_subq = (
+            db_session.query(func.count(GamePlayerModel.id))
+            .filter(GamePlayerModel.player_id == PlayerModel.id)
+            .correlate(PlayerModel)
+            .scalar_subquery()
+            .label('game_count')
+        )
+
         player_game_counts = db_session.query(
             PlayerModel.id,
             PlayerModel.display_name,
-            db_session.query(GamePlayerModel).filter(
-                GamePlayerModel.player_id == PlayerModel.id
-            ).count().label('game_count')
+            game_count_subq
         ).all()
         
         # Find our players in the results
@@ -258,10 +270,12 @@ class TestDatabaseQueries:
         """Test complex player statistics query"""
         helper = DatabaseTestHelper(db_session)
         
-        # Create player
-        player_data = PlayerFactory.create_human_player()
-        player = PlayerModel(**player_data)
-        db_session.add(player)
+        # Create two players
+        player1_data = PlayerFactory.create_human_player()
+        player2_data = PlayerFactory.create_ai_player()
+        player1 = PlayerModel(**player1_data)
+        player2 = PlayerModel(**player2_data)
+        db_session.add_all([player1, player2])
         db_session.commit()
         
         # Create multiple games with different outcomes
@@ -276,9 +290,11 @@ class TestDatabaseQueries:
             game = GameModel(
                 game_type="chess",
                 status=game_data["status"],
+                player1_id=player1.id,
+                player2_id=player2.id,
                 initial_state='{"board_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}',
                 current_state='{"board_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}',
-                winner_id=player.id if game_data["winner"] else None
+                winner_id=player1.id if game_data["winner"] else None
             )
             db_session.add(game)
             db_session.flush()
@@ -286,7 +302,7 @@ class TestDatabaseQueries:
             # Add player to game
             game_player = GamePlayerModel(
                 game_id=game.id,
-                player_id=player.id,
+                player_id=player1.id,
                 position="white"
             )
             db_session.add(game_player)
@@ -295,16 +311,16 @@ class TestDatabaseQueries:
         
         # Query player statistics
         total_games = db_session.query(GamePlayerModel).filter(
-            GamePlayerModel.player_id == player.id
+            GamePlayerModel.player_id == player1.id
         ).count()
         
         completed_games = db_session.query(GamePlayerModel).join(GameModel).filter(
-            GamePlayerModel.player_id == player.id,
+            GamePlayerModel.player_id == player1.id,
             GameModel.status == GameStatus.COMPLETED
         ).count()
         
         wins = db_session.query(GameModel).filter(
-            GameModel.winner_id == player.id
+            GameModel.winner_id == player1.id
         ).count()
         
         assert total_games == 4
@@ -440,15 +456,26 @@ class TestDatabasePerformance:
         db_session.commit()
         
         # Complex query: Get all players with their game counts and average moves per game
+        total_games_subq = (
+            db_session.query(func.count(GamePlayerModel.id))
+            .filter(GamePlayerModel.player_id == PlayerModel.id)
+            .correlate(PlayerModel)
+            .scalar_subquery()
+            .label('total_games')
+        )
+        total_moves_subq = (
+            db_session.query(func.count(MoveModel.id))
+            .join(GamePlayerModel, MoveModel.game_id == GamePlayerModel.game_id)
+            .filter(GamePlayerModel.player_id == PlayerModel.id)
+            .correlate(PlayerModel)
+            .scalar_subquery()
+            .label('total_moves')
+        )
         complex_query = db_session.query(
             PlayerModel.id,
             PlayerModel.display_name,
-            db_session.query(GamePlayerModel).filter(
-                GamePlayerModel.player_id == PlayerModel.id
-            ).count().label('total_games'),
-            db_session.query(MoveModel).join(GamePlayerModel).filter(
-                GamePlayerModel.player_id == PlayerModel.id
-            ).count().label('total_moves')
+            total_games_subq,
+            total_moves_subq
         ).all()
         
         # Should complete without issues

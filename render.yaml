@@ -1,3 +1,10 @@
+## NOTE: The previous version of this file defined the top-level key 'services:' twice.
+## In YAML, duplicate keys cause the first definition to be discarded, so the web and
+## static service definitions were ignored by Render. This resulted in the service
+## falling back to a dashboard-configured start command (gunicorn) which failed
+## because gunicorn isn't in requirements.txt. This version merges all services
+## under a single 'services:' list and explicitly uses uvicorn with multiple workers.
+
 services:
   # Backend API Service
   - type: web
@@ -5,7 +12,10 @@ services:
     env: python
     region: oregon
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Use uvicorn directly; adjust workers as needed. If you prefer gunicorn, add
+    # 'gunicorn' to requirements.txt and change this to:
+    # gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -35,7 +45,7 @@ services:
         source: /*
         destination: /index.html
 
-services:
+  # Redis Instance
   - type: redis
     name: lbm-arena-redis
     ipAllowList: []

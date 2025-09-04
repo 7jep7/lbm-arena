@@ -35,20 +35,21 @@ def event_loop():
 
 @pytest.fixture(scope="function")
 def test_db_engine():
-    """Create a test database engine with in-memory SQLite"""
+    """Create a test database engine using the actual configured database"""
+    # Use the same database URL as the application
+    database_url = settings.database_url
+    
     engine = create_engine(
-        test_settings.MEMORY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
+        database_url,
+        pool_pre_ping=True,
+        pool_recycle=300,
         echo=False  # Set to True for SQL debugging
     )
     
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
-    
+    # Don't create/drop tables - use existing database schema
     yield engine
     
-    # Clean up
-    Base.metadata.drop_all(bind=engine)
+    # Clean up connections
     engine.dispose()
 
 
@@ -66,6 +67,12 @@ def test_db_session(test_db_engine) -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture(scope="function")
+def db_session(test_db_session) -> Generator[Session, None, None]:
+    """Alias for test_db_session for backward compatibility"""
+    yield test_db_session
 
 
 @pytest.fixture(scope="function")

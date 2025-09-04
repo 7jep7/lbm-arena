@@ -65,9 +65,16 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
         )
     
     # Create game record
+    # Determine primary players for relational fields
+    player1_id = game.player_ids[0] if game.player_ids else None
+    # For chess enforce exactly 2, for poker use second if available
+    player2_id = game.player_ids[1] if len(game.player_ids) > 1 else game.player_ids[0] if game.game_type == "chess" and game.player_ids else None
+
     db_game = GameModel(
         game_type=game.game_type,
         status=GameStatus.IN_PROGRESS,
+        player1_id=player1_id,
+        player2_id=player2_id,
         initial_state=json.dumps(initial_state),
         current_state=json.dumps(initial_state)
     )

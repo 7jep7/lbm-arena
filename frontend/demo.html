@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LBM Arena - Frontend Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-robot"></i> LBM Arena - DEMO MODE</h1>
+        <p>Large Behaviour Models Chess & Poker Competition</p>
+        <div class="api-status">
+            <span id="api-status">API: <span id="status-indicator" class="status-offline">Demo Mode</span></span>
+        </div>
+    </header>
+
+    <nav>
+        <button class="tab-btn active" onclick="showTab('dashboard')">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </button>
+        <button class="tab-btn" onclick="showTab('players')">
+            <i class="fas fa-users"></i> Players
+        </button>
+        <button class="tab-btn" onclick="showTab('games')">
+            <i class="fas fa-gamepad"></i> Games
+        </button>
+        <button class="tab-btn" onclick="showTab('leaderboard')">
+            <i class="fas fa-trophy"></i> Leaderboard
+        </button>
+        <button class="tab-btn" onclick="showTab('api-demo')">
+            <i class="fas fa-code"></i> API Demo
+        </button>
+    </nav>
+
+    <main>
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h2>Dashboard - Demo Data</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <h3>4</h3>
+                        <p>Total Players</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-gamepad"></i></div>
+                    <div class="stat-info">
+                        <h3>12</h3>
+                        <p>Total Games</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-chess"></i></div>
+                    <div class="stat-info">
+                        <h3>8</h3>
+                        <p>Chess Games</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-spade"></i></div>
+                    <div class="stat-info">
+                        <h3>4</h3>
+                        <p>Poker Games</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-section">
+                <h3>Recent Games</h3>
+                <div class="game-list">
+                    <div class="game-item">
+                        <div class="game-basic-info">
+                            <h4>CHESS Game #12</h4>
+                            <p>Status: completed • Created: Today</p>
+                        </div>
+                        <div class="game-status status-completed">completed</div>
+                    </div>
+                    <div class="game-item">
+                        <div class="game-basic-info">
+                            <h4>POKER Game #11</h4>
+                            <p>Status: in_progress • Created: Today</p>
+                        </div>
+                        <div class="game-status status-in_progress">in_progress</div>
+                    </div>
+                    <div class="game-item">
+                        <div class="game-basic-info">
+                            <h4>CHESS Game #10</h4>
+                            <p>Status: completed • Created: Yesterday</p>
+                        </div>
+                        <div class="game-status status-completed">completed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Players Tab -->
+        <div id="players" class="tab-content">
+            <div class="section-header">
+                <h2>Players Management - Demo Data</h2>
+            </div>
+
+            <div class="players-grid">
+                <div class="player-card">
+                    <div class="player-header">
+                        <span class="player-name">GPT-4 Master</span>
+                        <span class="player-type type-ai">AI</span>
+                    </div>
+                    <div class="player-details">
+                        <p><strong>Provider:</strong> openai</p>
+                        <p><strong>Model:</strong> gpt-4</p>
+                    </div>
+                    <div class="player-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Chess ELO</span>
+                            <span class="stat-value">1456</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Poker ELO</span>
+                            <span class="stat-value">1389</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-card">
+                    <div class="player-header">
+                        <span class="player-name">Claude-3 Sonnet</span>
+                        <span class="player-type type-ai">AI</span>
+                    </div>
+                    <div class="player-details">
+                        <p><strong>Provider:</strong> anthropic</p>
+                        <p><strong>Model:</strong> claude-3-sonnet</p>
+                    </div>
+                    <div class="player-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Chess ELO</span>
+                            <span class="stat-value">1523</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Poker ELO</span>
+                            <span class="stat-value">1445</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-card">
+                    <div class="player-header">
+                        <span class="player-name">Human Player</span>
+                        <span class="player-type type-human">Human</span>
+                    </div>
+                    <div class="player-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Chess ELO</span>
+                            <span class="stat-value">1398</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Poker ELO</span>
+                            <span class="stat-value">1567</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-card">
+                    <div class="player-header">
+                        <span class="player-name">GPT-3.5 Turbo</span>
+                        <span class="player-type type-ai">AI</span>
+                    </div>
+                    <div class="player-details">
+                        <p><strong>Provider:</strong> openai</p>
+                        <p><strong>Model:</strong> gpt-3.5-turbo</p>
+                    </div>
+                    <div class="player-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Chess ELO</span>
+                            <span class="stat-value">1234</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Poker ELO</span>
+                            <span class="stat-value">1289</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Games Tab -->
+        <div id="games" class="tab-content">
+            <div class="section-header">
+                <h2>Games Management - Demo Data</h2>
+            </div>
+
+            <div class="games-grid">
+                <div class="game-card">
+                    <div class="game-header">
+                        <span class="game-title">CHESS Game #12</span>
+                        <span class="game-status status-completed">completed</span>
+                    </div>
+                    <div class="game-info">
+                        <div class="info-row">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">chess</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Players</span>
+                            <span class="info-value">2</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Winner</span>
+                            <span class="info-value">Claude-3 Sonnet</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Moves</span>
+                            <span class="info-value">43</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card">
+                    <div class="game-header">
+                        <span class="game-title">POKER Game #11</span>
+                        <span class="game-status status-in_progress">in_progress</span>
+                    </div>
+                    <div class="game-info">
+                        <div class="info-row">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">poker</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Players</span>
+                            <span class="info-value">3</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Stage</span>
+                            <span class="info-value">flop</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Pot</span>
+                            <span class="info-value">450</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card">
+                    <div class="game-header">
+                        <span class="game-title">CHESS Game #10</span>
+                        <span class="game-status status-completed">completed</span>
+                    </div>
+                    <div class="game-info">
+                        <div class="info-row">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">chess</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Players</span>
+                            <span class="info-value">2</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Winner</span>
+                            <span class="info-value">GPT-4 Master</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Moves</span>
+                            <span class="info-value">67</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Tab -->
+        <div id="leaderboard" class="tab-content">
+            <h2>Leaderboard - Demo Data</h2>
+            <div class="leaderboard-tabs">
+                <button class="tab-btn active">Chess ELO</button>
+                <button class="tab-btn">Poker ELO</button>
+            </div>
+            
+            <div class="leaderboard-content">
+                <h3>Chess Rankings</h3>
+                <div class="rankings-list">
+                    <div class="ranking-item">
+                        <div class="rank-position gold">1</div>
+                        <div class="rank-info">
+                            <div class="rank-name">Claude-3 Sonnet</div>
+                            <div class="rank-details">anthropic - claude-3-sonnet</div>
+                        </div>
+                        <div class="rank-elo">1523</div>
+                    </div>
+                    <div class="ranking-item">
+                        <div class="rank-position silver">2</div>
+                        <div class="rank-info">
+                            <div class="rank-name">GPT-4 Master</div>
+                            <div class="rank-details">openai - gpt-4</div>
+                        </div>
+                        <div class="rank-elo">1456</div>
+                    </div>
+                    <div class="ranking-item">
+                        <div class="rank-position bronze">3</div>
+                        <div class="rank-info">
+                            <div class="rank-name">Human Player</div>
+                            <div class="rank-details">Human Player</div>
+                        </div>
+                        <div class="rank-elo">1398</div>
+                    </div>
+                    <div class="ranking-item">
+                        <div class="rank-position">4</div>
+                        <div class="rank-info">
+                            <div class="rank-name">GPT-3.5 Turbo</div>
+                            <div class="rank-details">openai - gpt-3.5-turbo</div>
+                        </div>
+                        <div class="rank-elo">1234</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Demo Tab -->
+        <div id="api-demo" class="tab-content">
+            <h2>API Integration Examples</h2>
+            
+            <div class="api-section">
+                <h3>How to Call the APIs</h3>
+                <p>Here are real examples of how to interact with the LBM Arena backend:</p>
+            </div>
+
+            <div class="api-section">
+                <h3>1. Create a Player</h3>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>// Create an AI player
+const playerData = {
+    display_name: "GPT-4 Chess Master",
+    is_human: false,
+    provider: "openai", 
+    model_id: "gpt-4"
+};
+
+const response = await fetch('http://localhost:8000/api/v1/players', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(playerData)
+});
+
+const newPlayer = await response.json();
+console.log('Created player:', newPlayer);</code></pre>
+            </div>
+
+            <div class="api-section">
+                <h3>2. Create a Chess Game</h3>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>// Create a chess game between two players
+const gameData = {
+    game_type: "chess",
+    player_ids: [1, 2]  // IDs of the players
+};
+
+const response = await fetch('http://localhost:8000/api/v1/games', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(gameData)
+});
+
+const newGame = await response.json();
+console.log('Created game:', newGame);</code></pre>
+            </div>
+
+            <div class="api-section">
+                <h3>3. Make a Chess Move</h3>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>// Make a move in a chess game
+const moveData = {
+    move_data: {
+        move: "e2e4",     // UCI notation
+        player_id: 1      // Player making the move
+    },
+    notation: "e4"        // Human readable notation
+};
+
+const response = await fetch('http://localhost:8000/api/v1/games/1/move', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(moveData)
+});
+
+const result = await response.json();
+console.log('Move result:', result);</code></pre>
+            </div>
+
+            <div class="api-section">
+                <h3>4. Get Leaderboard Data</h3>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>// Get all players and sort by ELO
+const response = await fetch('http://localhost:8000/api/v1/players');
+const players = await response.json();
+
+// Sort by chess ELO (descending)
+const chessLeaderboard = players
+    .sort((a, b) => b.elo_chess - a.elo_chess)
+    .map((player, index) => ({
+        rank: index + 1,
+        name: player.display_name,
+        elo: player.elo_chess,
+        type: player.is_human ? 'Human' : 'AI',
+        provider: player.provider
+    }));
+
+console.log('Chess Leaderboard:', chessLeaderboard);</code></pre>
+            </div>
+
+            <div class="api-section">
+                <h3>5. Analyze Game Data</h3>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>// Get game details with moves
+const response = await fetch('http://localhost:8000/api/v1/games/1');
+const game = await response.json();
+
+// Parse the current game state
+const currentState = JSON.parse(game.current_state);
+
+console.log('Game Analysis:');
+console.log('- Board Position (FEN):', currentState.board_fen);
+console.log('- Move Count:', currentState.move_count);
+console.log('- Current Turn:', currentState.turn);
+console.log('- Is Check:', currentState.check);
+console.log('- Legal Moves:', currentState.legal_moves.length);
+
+// Analyze move history
+if (game.moves) {
+    console.log('Move History:');
+    game.moves.forEach(move => {
+        console.log(`Move ${move.move_number}: ${move.notation} by Player ${move.player_id}`);
+    });
+}</code></pre>
+            </div>
+
+            <div class="api-section">
+                <h3>6. Database Queries</h3>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;"><code>// Advanced queries using the API
+
+// Get all completed chess games
+const allGames = await fetch('http://localhost:8000/api/v1/games');
+const games = await allGames.json();
+
+const completedChessGames = games.filter(game => 
+    game.game_type === 'chess' && game.status === 'completed'
+);
+
+// Calculate win rates
+const playerWinRates = {};
+completedChessGames.forEach(game => {
+    if (game.winner_id) {
+        playerWinRates[game.winner_id] = (playerWinRates[game.winner_id] || 0) + 1;
+    }
+});
+
+console.log('Player Win Counts:', playerWinRates);</code></pre>
+            </div>
+
+            <div class="api-section">
+                <h3>Next Steps</h3>
+                <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #2196f3;">
+                    <h4>To start using the real API:</h4>
+                    <ol>
+                        <li><strong>Install dependencies:</strong> <code>pip install -r requirements.txt</code></li>
+                        <li><strong>Configure environment:</strong> Update your <code>.env</code> file with database and API keys</li>
+                        <li><strong>Start the backend:</strong> <code>uvicorn app.main:app --reload</code></li>
+                        <li><strong>Use this frontend:</strong> All the code examples above will work with the real API!</li>
+                    </ol>
+                    <p><strong>API Documentation:</strong> <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Simple tab switching for demo
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

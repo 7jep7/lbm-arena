@@ -9,8 +9,8 @@ Tests business logic for:
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from app.services.poker import PokerService
-from app.services.llm import LLMService
+from app.services.poker_service import PokerService
+from app.services.llm_service import LLMService
 from tests.utils.factories import GameFactory, PlayerFactory, MoveFactory
 
 
