@@ -15,7 +15,7 @@
     <div class="section">
         <h3>Quick Tests</h3>
         <button onclick="testHealth()">Health Check</button>
-        <button onclick="testModels()">List Models</button>
+        <button onclick="testModels()">List Players</button>
         <button onclick="testGames()">List Games</button>
         <button onclick="runAllTests()">Run All Tests</button>
         <div id="output" class="output">Click buttons to test API...</div>
@@ -44,21 +44,21 @@
         }
         
         async function testModels() {
-            const result = await apiCall('/models');
+            const result = await apiCall('/api/v1/players');
             showResult(result);
         }
         
         async function testGames() {
-            const result = await apiCall('/games');
+            const result = await apiCall('/api/v1/games');
             showResult(result);
         }
         
         async function runAllTests() {
             const tests = [
                 { name: 'Health', endpoint: '/health' },
-                { name: 'Models', endpoint: '/models' },
-                { name: 'Games', endpoint: '/games' },
-                { name: 'Stats', endpoint: '/stats' }
+                { name: 'Players', endpoint: '/api/v1/players' },
+                { name: 'Games', endpoint: '/api/v1/games' },
+                { name: 'Chess', endpoint: '/api/v1/chess' }
             ];
             
             let results = [];

@@ -3,6 +3,14 @@
 echo "🎮 LBM Arena - Quick Start (Conda)"
 echo "=================================="
 
+# Clean up any existing processes on our ports
+echo "🧹 Cleaning up existing processes..."
+# Kill processes on port 8000 (backend)
+lsof -ti:8000 | xargs -r kill -9 2>/dev/null && echo "   Killed processes on port 8000"
+# Kill processes on port 3000 (frontend)  
+lsof -ti:3000 | xargs -r kill -9 2>/dev/null && echo "   Killed processes on port 3000"
+sleep 1
+
 # Set conda environment path on the big partition
 CONDA_ENV_PATH="/mnt/nvme0n1p8/conda-envs/lbm-arena"
 CONDA_ENV_NAME="lbm-arena"
