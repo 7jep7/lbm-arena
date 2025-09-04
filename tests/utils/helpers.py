@@ -298,6 +298,8 @@ class DatabaseTestHelper:
         game = GameModel(
             game_type="chess",
             status=GameStatus.IN_PROGRESS,
+            player1_id=players[0].id,
+            player2_id=players[1].id,
             initial_state='{"board_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}',
             current_state='{"board_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}'
         )

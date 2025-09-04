@@ -37,3 +37,13 @@ class Game(Base):
     
     def __repr__(self):
         return f"<Game(id={self.id}, type='{self.game_type}', status='{self.status}')>"
+
+    # Backward compatibility for tests expecting game.players iterable
+    @property
+    def players(self):
+        players = []
+        if self.player1 is not None:
+            players.append(self.player1)
+        if self.player2 is not None:
+            players.append(self.player2)
+        return players
