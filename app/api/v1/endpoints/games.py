@@ -5,7 +5,7 @@ import json
 from app.core.database import get_db
 from app.models.game import Game as GameModel, GameStatus
 from app.models.move import Move as MoveModel, GamePlayer as GamePlayerModel
-from app.schemas.game import Game, GameCreate, MoveCreate
+from app.schemas.game import Game, GameCreate, MoveCreate, GamePlayerCreate
 from app.services.chess_service import ChessService
 from app.services.poker_service import PokerService
 from app.services.llm_service import LLMService
@@ -37,7 +37,8 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
     """Create a new game"""
     
     # Validate player count
-    if len(game.player_ids) < 2:
+    player_ids = game.player_ids or [p.player_id for p in game.players]
+    if len(player_ids) < 2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="At least 2 players required"
@@ -45,19 +46,19 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
     
     # Create initial game state based on game type
     if game.game_type == "chess":
-        if len(game.player_ids) != 2:
+        if len(player_ids) != 2:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Chess requires exactly 2 players"
             )
         initial_state = chess_service.create_new_game()
     elif game.game_type == "poker":
-        if len(game.player_ids) > 10:
+        if len(player_ids) > 10:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Poker supports maximum 10 players"
             )
-        initial_state = poker_service.create_new_game(len(game.player_ids))
+        initial_state = poker_service.create_new_game(len(player_ids))
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -66,26 +67,25 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
     
     # Create game record
     # Determine primary players for relational fields
-    player1_id = game.player_ids[0] if game.player_ids else None
-    # For chess enforce exactly 2, for poker use second if available
-    player2_id = game.player_ids[1] if len(game.player_ids) > 1 else game.player_ids[0] if game.game_type == "chess" and game.player_ids else None
+    player1_id = player_ids[0] if player_ids else None
+    player2_id = player_ids[1] if len(player_ids) > 1 else player_ids[0] if game.game_type == "chess" and player_ids else None
 
     db_game = GameModel(
         game_type=game.game_type,
-        status=GameStatus.IN_PROGRESS,
+        status=GameStatus.WAITING if game.status == 'waiting' else GameStatus.IN_PROGRESS,
         player1_id=player1_id,
         player2_id=player2_id,
-        initial_state=json.dumps(initial_state),
-        current_state=json.dumps(initial_state)
+        initial_state=initial_state,
+        current_state=initial_state
     )
     db.add(db_game)
     db.commit()
     db.refresh(db_game)
     
     # Add players to game
-    positions = ["white", "black"] if game.game_type == "chess" else [f"player_{i}" for i in range(len(game.player_ids))]
-    
-    for i, player_id in enumerate(game.player_ids):
+    positions = ["white", "black"] if game.game_type == "chess" else [f"player_{i}" for i in range(len(player_ids))]
+
+    for i, player_id in enumerate(player_ids):
         game_player = GamePlayerModel(
             game_id=db_game.id,
             player_id=player_id,

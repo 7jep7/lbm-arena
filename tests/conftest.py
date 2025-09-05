@@ -1,11 +1,18 @@
 """
 Pytest configuration and shared fixtures for LBM Arena tests
 
-This module provides:
+Provides:
 - Test database setup and teardown
 - Common fixtures used across all tests
 - Test client configuration
 - Mock configurations
+
+Database Policy:
+Tests intentionally use the DATABASE_URL provided by the environment (e.g. a
+Supabase Postgres instance) and DO NOT silently fall back to SQLite. If the
+remote database is unreachable (timeout / network error) a clear summary will
+be printed at the end of the test session to highlight the connectivity
+problem.
 """
 
 import pytest
@@ -17,12 +24,31 @@ from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch
 import tempfile
 import os
+from sqlalchemy.exc import OperationalError
 
 # Import application components
 from app.main import app
 from app.core.database import get_db, Base
 from app.core.config import settings
 from tests.test_config import test_settings
+
+# ---------------------------------------------------------------------------
+# Remote database connectivity check (Supabase or other Postgres)
+# ---------------------------------------------------------------------------
+SUPABASE_CONNECTION_ERROR: str | None = None
+
+try:
+    # Lightweight connectivity probe (no schema operations)
+    probe_engine = create_engine(settings.database_url, pool_pre_ping=True)
+    with probe_engine.connect() as conn:
+        conn.exec_driver_sql("SELECT 1")
+except Exception as e:  # Broad except to ensure we record *any* failure
+    SUPABASE_CONNECTION_ERROR = str(e)
+finally:
+    try:
+        probe_engine.dispose()  # type: ignore
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session")
@@ -200,3 +226,25 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "performance" in item.keywords:
                 item.add_marker(skip_performance)
+
+def pytest_sessionfinish(session, exitstatus):  # noqa: D401
+    """Add a clear summary about Supabase connectivity at end of run."""
+    if SUPABASE_CONNECTION_ERROR:
+        session.config.warn(
+            code="supabase-connection",
+            message=(
+                "Supabase (DATABASE_URL) connection failed during test startup. "
+                "Error: " + SUPABASE_CONNECTION_ERROR + "\n"
+                "Tests may have failed due to missing database connectivity."
+            ),
+        )
+        print("\n================ SUPABASE CONNECTION SUMMARY ================")
+        print("Database URL:", settings.database_url)
+        print("Status: FAILED to connect")
+        print("Error :", SUPABASE_CONNECTION_ERROR)
+        print("============================================================\n")
+    else:
+        print("\n================ SUPABASE CONNECTION SUMMARY ================")
+        print("Database URL:", settings.database_url)
+        print("Status: Connected successfully")
+        print("============================================================\n")

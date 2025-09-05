@@ -91,6 +91,14 @@ class PlayerFactory:
         
         return players
 
+    # Test compatibility helpers
+    @staticmethod
+    def build(**kwargs) -> Dict[str, Any]:
+        """Alias used by some tests expecting factory_boy style build."""
+        if kwargs.get('is_human') is False or kwargs.get('provider'):  # AI
+            return PlayerFactory.create_ai_player(**kwargs)
+        return PlayerFactory.create_human_player(**kwargs)
+
 
 class GameFactory:
     """Factory for creating Game test instances"""
@@ -98,7 +106,7 @@ class GameFactory:
     @staticmethod
     def create_chess_game(
         player_ids: List[int] = None,
-        status: GameStatus = GameStatus.WAITING,
+        status: GameStatus = GameStatus.PENDING,
         initial_state: Dict[str, Any] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -130,7 +138,7 @@ class GameFactory:
     @staticmethod
     def create_poker_game(
         player_ids: List[int] = None,
-        status: GameStatus = GameStatus.WAITING,
+        status: GameStatus = GameStatus.PENDING,
         initial_state: Dict[str, Any] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -188,6 +196,13 @@ class GameFactory:
             game_data["current_state"]["fullmove"] = (moves_played // 2) + 1
         
         return game_data
+
+    @staticmethod
+    def build(**kwargs) -> Dict[str, Any]:  # Compatibility helper
+        game_type = kwargs.get('game_type', GameType.CHESS)
+        if game_type == GameType.POKER or game_type == 'poker':
+            return GameFactory.create_poker_game(**kwargs)
+        return GameFactory.create_chess_game(**kwargs)
 
 
 class MoveFactory:
@@ -267,6 +282,10 @@ class MoveFactory:
             moves.append(move)
         
         return moves
+
+    @staticmethod
+    def build(**kwargs) -> Dict[str, Any]:
+        return MoveFactory.create_chess_move(**kwargs)
 
 
 class GamePlayerFactory:
