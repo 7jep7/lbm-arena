@@ -239,18 +239,18 @@ class GameFactory:
         return game_data
 
     @staticmethod
-    def build(**kwargs) -> Dict[str, Any]:  # Compatibility helper
+    def build(**kwargs) -> Dict[str, Any]:
+        """Compatibility helper returning an AttrDict for a single game."""
         game_type = kwargs.get('game_type', GameType.CHESS)
         if game_type == GameType.POKER or game_type == 'poker':
             data = GameFactory.create_poker_game(**kwargs)
         else:
             data = GameFactory.create_chess_game(**kwargs)
 
-        # Add minimal fields commonly expected by schema tests
         from datetime import datetime
         full = dict(data)
         full.setdefault('id', 1)
-    full.setdefault('result', None)
+        full.setdefault('result', None)
         full.setdefault('winner_id', None)
         full.setdefault('created_at', datetime.now())
         full.setdefault('updated_at', datetime.now())

@@ -11,6 +11,7 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from app.services.poker_service import PokerService
 from app.services.llm_service import LLMService
+from app.services.chess_service import ChessService
 from tests.utils.factories import GameFactory, PlayerFactory, MoveFactory
 
 

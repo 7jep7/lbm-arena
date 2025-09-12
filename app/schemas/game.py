@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, validator, Field, root_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from app.models.game import GameType, GameStatus
@@ -76,30 +76,32 @@ class GameCreate(GameBase):
     players: Optional[List[GamePlayerCreate]] = None
     # tests & endpoints expect list of raw player ids sometimes
     player_ids: Optional[List[int]] = None
-
     @validator('status')
     def validate_status(cls, v):
         if v not in ALLOWED_STATUSES:
             raise ValueError('invalid status')
         return v
 
-    @validator('players', always=True)
-    def validate_players(cls, v, values):
-        # If players omitted but player_ids supplied, accept that and leave
-        # `players` as None — endpoint will derive ids from `player_ids`.
-        if v is None:
-            if values.get('player_ids'):
-                return v
-            raise ValueError('players must not be empty')
-        if not v or len(v) == 0:
-            raise ValueError('players must not be empty')
-        return v
+    @root_validator(pre=True)
+    def ensure_players_or_ids(cls, values):
+        # Accept either `players` (detailed) or `player_ids` (compact). If only
+        # `players` provided, derive `player_ids` so downstream code can rely on
+        # that field. This avoids Pydantic field-validator ordering issues.
+        players = values.get('players')
+        player_ids = values.get('player_ids')
 
-    @validator('player_ids', always=True)
-    def derive_player_ids(cls, v, values):  # type: ignore
-        if v is None and 'players' in values and values['players']:
-            return [p.player_id for p in values['players']]
-        return v
+        if (players is None or (isinstance(players, list) and len(players) == 0)) and (player_ids is None or len(player_ids) == 0):
+            raise ValueError('players must not be empty')
+
+        # Derive player_ids when only players provided
+        if (player_ids is None or len(player_ids) == 0) and players:
+            try:
+                values['player_ids'] = [p.get('player_id') if isinstance(p, dict) else p.player_id for p in players]
+            except Exception:
+                # Fallback: leave as-is and let later validation surface issues
+                pass
+
+        return values
 
 class GameUpdate(CompatBaseModel):
     status: Optional[str] = None
@@ -125,7 +127,7 @@ class Game(CompatBaseModel):
     winner_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    players: List[GamePlayerCreate] = []
+    players: List[GamePlayerResponse] = []
 
     class Config:
         orm_mode = True

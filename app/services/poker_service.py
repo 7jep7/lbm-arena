@@ -180,39 +180,125 @@ class PokerService:
         return True
 
     def calculate_hand_strength(self, cards: List[str]) -> str:
-        # Very naive classification based on set sizes; placeholder for tests
-        ranks = [c[0] for c in cards]
-        unique = len(set(ranks))
-        if set(cards) == {"As", "Ks", "Qs", "Js", "Ts"}:
+        # Robust classification for 5-card hands used in tests
+        if not cards or len(cards) != 5:
+            return "high_card"
+
+        def rank_value(r):
+            if r == 'A':
+                return 14
+            if r == 'K':
+                return 13
+            if r == 'Q':
+                return 12
+            if r == 'J':
+                return 11
+            if r == 'T':
+                return 10
+            try:
+                return int(r)
+            except Exception:
+                return 0
+
+        ranks = [rank_value(c[0]) for c in cards]
+        suits = [c[-1] for c in cards]
+        counts = {}
+        for r in ranks:
+            counts[r] = counts.get(r, 0) + 1
+
+        unique_ranks = sorted(set(ranks), reverse=True)
+
+        # Check for straight (handle wheel A-2-3-4-5)
+        sorted_ranks = sorted(unique_ranks)
+        is_straight = False
+        high_card = max(sorted_ranks)
+        if len(sorted_ranks) == 5 and sorted_ranks[0] + 4 == sorted_ranks[-1]:
+            is_straight = True
+            high_card = sorted_ranks[-1]
+        else:
+            # check wheel: A,2,3,4,5
+            if set(sorted_ranks) == {14, 2, 3, 4, 5}:
+                is_straight = True
+                high_card = 5
+
+        is_flush = len(set(suits)) == 1
+
+        # Royal flush
+        if is_flush and is_straight and high_card == 14:
             return "royal_flush"
-        if unique == 2:
-            return "four_of_a_kind" if any(ranks.count(r) == 4 for r in ranks) else "full_house"
-        if unique == 3:
-            return "three_of_a_kind" if any(ranks.count(r) == 3 for r in ranks) else "two_pair"
-        if unique == 4:
+        if is_flush and is_straight:
+            return "straight_flush"
+
+        # Counts based hands
+        counts_vals = sorted(counts.values(), reverse=True)
+        if counts_vals[0] == 4:
+            return "four_of_a_kind"
+        if counts_vals[0] == 3 and counts_vals[1] == 2:
+            return "full_house"
+        if is_flush:
+            return "flush"
+        if is_straight:
+            return "straight"
+        if counts_vals[0] == 3:
+            return "three_of_a_kind"
+        if counts_vals[0] == 2 and counts_vals[1] == 2:
+            return "two_pair"
+        if counts_vals[0] == 2:
             return "pair"
         return "high_card"
 
     def determine_winner(self, hands: Dict[int, List[str]]) -> Optional[int]:
-        # Score mapping approximate ordering for test purposes
+        # Determine winner by class and tie-breakers. Return None on tie.
         order = [
             "high_card","pair","two_pair","three_of_a_kind","straight","flush",
             "full_house","four_of_a_kind","straight_flush","royal_flush"
         ]
-        best_player = None
-        best_score = -1
-        seen_patterns = {}
-        for player_id, cards in hands.items():
-            strength = self.calculate_hand_strength(cards)
-            score = order.index(strength) if strength in order else 0
-            if score > best_score:
-                best_score = score
-                best_player = player_id
-                seen_patterns = {score}
-            elif score == best_score:
-                # tie
+
+        def hand_value(cards: List[str]):
+            cls = self.calculate_hand_strength(cards)
+            cls_idx = order.index(cls) if cls in order else 0
+
+            # Build tiebreaker tuple
+            def rank_val(r):
+                if r == 'A':
+                    return 14
+                if r == 'K':
+                    return 13
+                if r == 'Q':
+                    return 12
+                if r == 'J':
+                    return 11
+                if r == 'T':
+                    return 10
+                try:
+                    return int(r)
+                except Exception:
+                    return 0
+
+            ranks = [rank_val(c[0]) for c in cards]
+            counts = {}
+            for r in ranks:
+                counts[r] = counts.get(r, 0) + 1
+
+            # For pair/trips/quads, sort by (count desc, rank desc)
+            sorted_by_count = sorted(counts.items(), key=lambda x: (x[1], x[0]), reverse=True)
+            tiebreakers = tuple([r for _, r in sorted_by_count for r in ([ _[0] ] if False else [])])
+            # Better approach: produce tuple of ranks ordered by (count desc, rank desc)
+            ordered_ranks = tuple([rank for rank, cnt in sorted(counts.items(), key=lambda x: (x[1], x[0]), reverse=True)])
+            # Also include remaining high cards ordered desc for safety
+            remaining = tuple(sorted([r for r in ranks if r not in ordered_ranks], reverse=True))
+            return (cls_idx, ordered_ranks, remaining)
+
+        best = None
+        best_val = None
+        for pid, cards in hands.items():
+            v = hand_value(cards)
+            if best_val is None or v > best_val:
+                best_val = v
+                best = pid
+            elif v == best_val:
                 return None
-        return best_player
+        return best
 
     def calculate_pot_size(self, bets: List[int]) -> int:
         return sum(bets)

@@ -346,6 +346,24 @@ class APITestHelper:
         assert_response_success(resp2)
         return resp2.json()
 
+    def update_game(self, game_id: int, payload: Dict[str, Any], expected_status: int = 200) -> Dict[str, Any]:
+        """Update a game via API and return the updated resource."""
+        response = self.client.put(f"/api/v1/games/{game_id}", json=payload)
+        assert_response_success(response, expected_status)
+        return response.json()
+
+    def get_game(self, game_id: int) -> Dict[str, Any]:
+        """Fetch a game via API and return JSON."""
+        response = self.client.get(f"/api/v1/games/{game_id}")
+        assert_response_success(response)
+        return response.json()
+
+    def get_player(self, player_id: int) -> Dict[str, Any]:
+        """Fetch a player by id via API and return JSON."""
+        response = self.client.get(f"/api/v1/players/{player_id}")
+        assert_response_success(response)
+        return response.json()
+
 
 class DatabaseTestHelper:
     """Helper class for database testing"""
