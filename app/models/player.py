@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -8,7 +8,7 @@ class Player(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     is_human = Column(Boolean, default=False, nullable=False)
-    display_name = Column(String(255), nullable=False)
+    display_name = Column(Text, nullable=False)
     provider = Column(String(100), nullable=True)  # openai, anthropic, etc.
     model_id = Column(String(255), nullable=True)  # gpt-4, claude-3, etc.
     # DB default remains 1200; API layer overrides to 1500 for new players per tests.

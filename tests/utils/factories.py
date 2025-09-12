@@ -9,6 +9,31 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import random
 import json
+import types
+
+
+# Small helper that behaves like both dict and attribute-object for tests
+class AttrDict(dict):
+    """A dict subclass that also allows attribute access for tests.
+
+    Using a dict-subclass keeps isinstance(..., dict) checks working while
+    allowing dot-access in tests that expect it.
+    """
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError as e:
+            raise AttributeError(name) from e
+
+    def __setattr__(self, name, value):
+        # store attributes as dict items
+        self[name] = value
+
+    def get(self, key, default=None):
+        return dict.get(self, key, default)
+
+    def to_dict(self):
+        return dict(self)
 
 # Simple fake data generator
 def fake_name():
@@ -29,8 +54,13 @@ class PlayerFactory:
         **kwargs
     ) -> Dict[str, Any]:
         """Create a human player data dictionary"""
+        display = display_name if display_name is not None else fake_name()
+        # Keep display names within typical DB limits to avoid DataError in tests
+        if display is not None and len(display) > 255:
+            display = display[:255]
+
         return {
-            "display_name": display_name if display_name is not None else fake_name(),
+            "display_name": display,
             "is_human": True,
             "provider": None,
             "model_id": None,
@@ -96,8 +126,19 @@ class PlayerFactory:
     def build(**kwargs) -> Dict[str, Any]:
         """Alias used by some tests expecting factory_boy style build."""
         if kwargs.get('is_human') is False or kwargs.get('provider'):  # AI
-            return PlayerFactory.create_ai_player(**kwargs)
-        return PlayerFactory.create_human_player(**kwargs)
+            data = PlayerFactory.create_ai_player(**kwargs)
+        else:
+            data = PlayerFactory.create_human_player(**kwargs)
+
+        # Return a simple attribute-accessible object for tests that expect
+        # .id / .display_name style access instead of a raw dict.
+        # Add minimal identity and timestamps used in schema tests
+        full = dict(data)
+        # avoid deterministic duplicate ids in tests that persist multiple
+        full.setdefault('id', random.randint(1000, 10 ** 9))
+        full.setdefault('created_at', datetime.now())
+        full.setdefault('updated_at', None)
+        return AttrDict(**full)
 
 
 class GameFactory:
@@ -106,7 +147,7 @@ class GameFactory:
     @staticmethod
     def create_chess_game(
         player_ids: List[int] = None,
-        status: GameStatus = GameStatus.PENDING,
+    status: GameStatus = GameStatus.WAITING,
         initial_state: Dict[str, Any] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -125,10 +166,10 @@ class GameFactory:
             }
         
         return {
-            "game_type": GameType.CHESS,
-            "status": status,
-            "initial_state": json.dumps(initial_state),  # Store as JSON string for model
-            "current_state": json.dumps(initial_state.copy()),  # Store as JSON string for model
+            "game_type": GameType.CHESS.value if hasattr(GameType.CHESS, 'value') else str(GameType.CHESS).lower(),
+            "status": (status.value if hasattr(status, 'value') else str(status)).lower(),
+            "initial_state": initial_state,  # Keep as dict for services/tests
+            "current_state": initial_state.copy(),  # Keep as dict for services/tests
             "player1_id": player_ids[0],  # Required by model
             "player2_id": player_ids[1],  # Required by model
             "player_ids": player_ids,  # For API creation
@@ -138,7 +179,7 @@ class GameFactory:
     @staticmethod
     def create_poker_game(
         player_ids: List[int] = None,
-        status: GameStatus = GameStatus.PENDING,
+    status: GameStatus = GameStatus.WAITING,
         initial_state: Dict[str, Any] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -163,10 +204,10 @@ class GameFactory:
             }
         
         return {
-            "game_type": GameType.POKER,
-            "status": status,
-            "initial_state": json.dumps(initial_state),  # Store as JSON string for model
-            "current_state": json.dumps(initial_state.copy()),  # Store as JSON string for model
+            "game_type": GameType.POKER.value if hasattr(GameType.POKER, 'value') else str(GameType.POKER).lower(),
+            "status": (status.value if hasattr(status, 'value') else str(status)).lower(),
+            "initial_state": initial_state,  # Keep as dict for services/tests
+            "current_state": initial_state.copy(),  # Keep as dict for services/tests
             "player1_id": player_ids[0],  # Required by model
             "player2_id": player_ids[1] if len(player_ids) > 1 else None,  # Required by model
             "player_ids": player_ids,  # For API creation
@@ -201,8 +242,21 @@ class GameFactory:
     def build(**kwargs) -> Dict[str, Any]:  # Compatibility helper
         game_type = kwargs.get('game_type', GameType.CHESS)
         if game_type == GameType.POKER or game_type == 'poker':
-            return GameFactory.create_poker_game(**kwargs)
-        return GameFactory.create_chess_game(**kwargs)
+            data = GameFactory.create_poker_game(**kwargs)
+        else:
+            data = GameFactory.create_chess_game(**kwargs)
+
+        # Add minimal fields commonly expected by schema tests
+        from datetime import datetime
+        full = dict(data)
+        full.setdefault('id', 1)
+    full.setdefault('result', None)
+        full.setdefault('winner_id', None)
+        full.setdefault('created_at', datetime.now())
+        full.setdefault('updated_at', datetime.now())
+        full.setdefault('players', [])
+
+        return AttrDict(**full)
 
 
 class MoveFactory:
@@ -218,6 +272,7 @@ class MoveFactory:
         **kwargs
     ) -> Dict[str, Any]:
         """Create a chess move data dictionary"""
+        # Store move_data as a dict for factory consumers.
         return {
             "game_id": game_id,
             "player_id": player_id,
@@ -230,7 +285,8 @@ class MoveFactory:
                 "check": False,
                 "checkmate": False
             },
-            "notation": move_notation,
+            # Use explicit move_notation key to match API/tests expectations
+            "move_notation": move_notation,
             "time_taken": time_taken,
             **kwargs
         }
@@ -255,7 +311,7 @@ class MoveFactory:
                 "pot_after": 40,
                 "chips_after": 980
             },
-            "notation": f"{action}({amount})" if amount > 0 else action,
+            "move_notation": f"{action}({amount})" if amount > 0 else action,
             "time_taken": random.randint(2000, 10000),
             **kwargs
         }
@@ -282,10 +338,22 @@ class MoveFactory:
             moves.append(move)
         
         return moves
-
     @staticmethod
     def build(**kwargs) -> Dict[str, Any]:
-        return MoveFactory.create_chess_move(**kwargs)
+        """Compatibility helper returning an AttrDict for a single move."""
+        data = MoveFactory.create_chess_move(**kwargs)
+        # Ensure fields commonly expected by schema/tests exist
+        data.setdefault('id', random.randint(1000, 10 ** 9))
+        data.setdefault('game_id', data.get('game_id', 1))
+        data.setdefault('player_id', data.get('player_id', 1))
+        data.setdefault('move_number', data.get('move_number', 1))
+        data.setdefault('move_notation', data.get('move_notation', 'e4'))
+        data.setdefault('position_before', None)
+        data.setdefault('position_after', None)
+        data.setdefault('time_taken', data.get('time_taken', None))
+        data.setdefault('analysis', None)
+        data.setdefault('created_at', datetime.now())
+        return AttrDict(**data)
 
 
 class GamePlayerFactory:

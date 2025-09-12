@@ -2,6 +2,7 @@ from pydantic import BaseModel, validator, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from app.models.game import GameType, GameStatus
+from app.schemas.player import Player
 
 # ---------------------------------------------------------------------------
 # Player-in-game schemas expected by tests
@@ -33,7 +34,10 @@ class GamePlayerCreate(CompatBaseModel):
 class GamePlayerResponse(GamePlayerCreate):
     id: int
     game_id: int
-    player: Optional[Dict[str, Any]] = None
+    # Accept a nested Player schema so Pydantic will coerce raw dicts into
+    # a `Player` model instance. Tests expect attribute access (e.g. player.id)
+    # rather than a plain dict.
+    player: Optional[Player] = None
 
 class GamePlayer(CompatBaseModel):  # Backward compatibility with existing usages
     id: int
@@ -65,8 +69,11 @@ class GameBase(CompatBaseModel):
         return v
 
 class GameCreate(GameBase):
-    status: str
-    players: List[GamePlayerCreate]
+    # Allow clients/tests to omit `status` and/or `players` and instead provide
+    # `player_ids`. This makes the API more flexible for test helpers that
+    # sometimes send only `player_ids`.
+    status: Optional[str] = "pending"
+    players: Optional[List[GamePlayerCreate]] = None
     # tests & endpoints expect list of raw player ids sometimes
     player_ids: Optional[List[int]] = None
 
@@ -76,8 +83,14 @@ class GameCreate(GameBase):
             raise ValueError('invalid status')
         return v
 
-    @validator('players')
-    def validate_players(cls, v):
+    @validator('players', always=True)
+    def validate_players(cls, v, values):
+        # If players omitted but player_ids supplied, accept that and leave
+        # `players` as None — endpoint will derive ids from `player_ids`.
+        if v is None:
+            if values.get('player_ids'):
+                return v
+            raise ValueError('players must not be empty')
         if not v or len(v) == 0:
             raise ValueError('players must not be empty')
         return v
@@ -103,6 +116,10 @@ class GameUpdate(CompatBaseModel):
 class Game(CompatBaseModel):
     id: int
     game_type: str
+    # Make initial/current state optional for serialization tests that don't
+    # include full state payloads.
+    initial_state: Optional[Dict[str, Any]] = None
+    current_state: Optional[Dict[str, Any]] = None
     status: str
     result: Optional[str] = None
     winner_id: Optional[int] = None

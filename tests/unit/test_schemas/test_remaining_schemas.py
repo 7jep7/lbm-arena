@@ -13,8 +13,13 @@ from app.schemas.game import (
     GameCreate,
     GameUpdate,
     Game,
+    GameResponse,
+    GamePlayerCreate,
+    GamePlayerResponse,
     MoveCreate,
     Move,
+    MoveUpdate,
+    MoveResponse,
     GamePlayer
 )
 from app.models.game import GameType, GameStatus

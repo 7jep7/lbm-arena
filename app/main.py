@@ -4,6 +4,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import engine, Base
 import os
+from datetime import datetime, timezone
 
 app = FastAPI(title="LBM Arena API", version="1.0.0")
 
@@ -14,6 +15,17 @@ async def startup_event():
         # Create tables if they don't exist (safe operation)
         Base.metadata.create_all(bind=engine)
         print("✅ Database tables verified on startup")
+        # Record application startup time to help API filtering in tests
+        try:
+            app.state.start_time = datetime.now(timezone.utc)
+        except Exception:
+            pass
+        # Unique marker for this test run / process to help filter test-created rows
+        try:
+            import uuid
+            app.state.test_run_id = str(uuid.uuid4())
+        except Exception:
+            app.state.test_run_id = None
     except Exception as e:
         print(f"⚠️  Database table creation failed on startup: {e}")
 

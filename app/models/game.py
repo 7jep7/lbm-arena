@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -22,8 +22,9 @@ class Game(Base):
     __tablename__ = "games"
     
     id = Column(Integer, primary_key=True, index=True)
-    game_type = Column(Enum(GameType), nullable=False)
-    status = Column(Enum(GameStatus), default=GameStatus.WAITING)
+    # Use plain strings to avoid DB enum type mismatches across environments.
+    game_type = Column(String(50), nullable=False)
+    status = Column(String(50), default=GameStatus.WAITING.value)
     player1_id = Column(Integer, ForeignKey("players.id"), nullable=False)
     player2_id = Column(Integer, ForeignKey("players.id"), nullable=False)
     # Store JSON as text for existing DB, but expose dict interface via properties
@@ -89,14 +90,21 @@ class Game(Base):
     def players(self):
         players = []
         if self.player1 is not None:
-            players.append({"player_id": self.player1.id, "position": "white" if self.game_type == GameType.CHESS else "player1"})
+            players.append({
+                "player_id": self.player1.id,
+                "role": "white" if self.game_type == GameType.CHESS.value else "player1"
+            })
         if self.player2 is not None:
-            players.append({"player_id": self.player2.id, "position": "black" if self.game_type == GameType.CHESS else "player2"})
+            players.append({
+                "player_id": self.player2.id,
+                "role": "black" if self.game_type == GameType.CHESS.value else "player2"
+            })
         # Also include any additional GamePlayer rows (e.g., poker with >2 players)
         if self.game_players:
             # Avoid duplicates for player1/player2 already added
             existing_ids = {p["player_id"] for p in players}
             for gp in self.game_players:
                 if gp.player_id not in existing_ids:
-                    players.append({"player_id": gp.player_id, "position": gp.position})
+                    # Normalize to 'role' key expected by API/schema/tests
+                    players.append({"player_id": gp.player_id, "role": gp.position})
         return players

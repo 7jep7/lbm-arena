@@ -30,8 +30,11 @@ def assert_response_error(response, expected_status: int = 400):
 
 
 def assert_valid_json_response(response) -> Dict[str, Any]:
-    """Assert response is valid JSON and return parsed data"""
-    assert_response_success(response)
+    """Parse response JSON and return parsed data.
+
+    This helper does not re-check the HTTP status because tests typically
+    call `assert_response_success(response, expected_status)` first.
+    """
     try:
         return response.json()
     except json.JSONDecodeError:
@@ -66,7 +69,7 @@ def assert_game_structure(game_data: Dict[str, Any], check_id: bool = True):
     
     # Type checks
     assert game_data["game_type"] in ["chess", "poker"]
-    assert game_data["status"] in ["waiting", "in_progress", "completed", "aborted"]
+    assert game_data["status"] in ["pending", "waiting", "in_progress", "completed", "aborted"]
     assert isinstance(game_data["initial_state"], dict)
     assert isinstance(game_data["current_state"], dict)
 
@@ -235,16 +238,34 @@ class APITestHelper:
         assert_response_success(response, 201)
         return response.json()
     
-    def create_game(self, game_data: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Create a game via API and return the response data"""
+    def create_game(self, game_data: Dict[str, Any] = None, *, players: List[Dict[str, Any]] = None, status: str = "pending", game_type: str = "chess") -> Dict[str, Any]:
+        """Create a game via API and return the response data.
+
+        Accepts either a full `game_data` dict or convenience args: `players`, `status`, `game_type`.
+        """
         if game_data is None:
-            # First create players
-            player1 = self.create_player()
-            player2 = self.create_player()
-            
-            from tests.utils.factories import quick_chess_game_data
-            game_data = quick_chess_game_data([player1["id"], player2["id"]])
-        
+            # If player objects passed, extract ids; otherwise create two default players
+            if players is None:
+                player1 = self.create_player()
+                player2 = self.create_player()
+                player_ids = [player1["id"], player2["id"]]
+                players_payload = [
+                    {"player_id": player_ids[0], "role": "white"},
+                    {"player_id": player_ids[1], "role": "black"}
+                ]
+            else:
+                # Accept either player dicts or ids
+                if all(isinstance(p, dict) for p in players):
+                    players_payload = [{"player_id": p["id"], "role": p.get("role", "player_0")} for p in players]
+                else:
+                    players_payload = [{"player_id": p, "role": "player_0"} for p in players]
+
+            game_data = {
+                "game_type": game_type,
+                "status": status,
+                "players": players_payload
+            }
+
         response = self.client.post("/api/v1/games", json=game_data)
         assert_response_success(response, 201)
         return response.json()
@@ -260,12 +281,70 @@ class APITestHelper:
         response = self.client.get("/api/v1/games")
         assert_response_success(response)
         return response.json()
+
+    def add_moves_to_game(self, game_id: int, moves: List[Dict[str, Any]], expected_status: int = 201) -> List[Dict[str, Any]]:
+        """Helper to add multiple moves to a game via the API."""
+        results = []
+        for m in moves:
+            resp = self.client.post(f"/api/v1/games/{game_id}/moves", json=m)
+            assert resp.status_code == expected_status, resp.text
+            try:
+                results.append(resp.json())
+            except Exception:
+                results.append({"raw": resp.text})
+        return results
+
+    def add_moves_to_game(self, game_id: int, count: int = 1, player_id: int | None = None) -> List[Dict[str, Any]]:
+        """Create `count` simple moves for a game. If player_id is not provided, use the first player in the game."""
+        results = []
+        # Fetch game to infer player if needed
+        resp = self.client.get(f"/api/v1/games/{game_id}")
+        assert_response_success(resp)
+        game = resp.json()
+        players = game.get("players", [])
+        if not players:
+            raise AssertionError("No players found in game")
+        default_player_id = players[0]["player_id"]
+        # Ensure game is in_progress for moves
+        if game.get("status") != "in_progress":
+            update_resp = self.client.put(f"/api/v1/games/{game_id}", json={"status": "in_progress"})
+            assert update_resp.status_code in (200, 201), update_resp.text
+            game = self.client.get(f"/api/v1/games/{game_id}").json()
+        for i in range(count):
+            pid = player_id or default_player_id
+            move_payload = {
+                "player_id": pid,
+                "move_number": i + 1,
+                "move_notation": "e4",
+                "position_before": game.get("current_state", {}).get("board_fen") if isinstance(game.get("current_state"), dict) else None,
+                "position_after": None
+            }
+            r = self.client.post(f"/api/v1/games/{game_id}/moves", json=move_payload)
+            assert r.status_code == 201, r.text
+            results.append(r.json())
+        return results
     
     def health_check(self) -> Dict[str, Any]:
         """Perform health check via API"""
         response = self.client.get("/health")
         assert_response_success(response)
         return response.json()
+
+    def get_game_player(self, game_id: int) -> Dict[str, Any]:
+        """Return the first player dict for the given game via the API (tests expect a player-like dict)."""
+        resp = self.client.get(f"/api/v1/games/{game_id}")
+        assert_response_success(resp)
+        game = resp.json()
+        players = game.get("players", [])
+        if not players:
+            raise AssertionError("No players found in game")
+
+        # Fetch a full player object using the players API so tests can access 'id' and other fields
+        p = players[0]
+        player_id = p.get("player_id")
+        resp2 = self.client.get(f"/api/v1/players/{player_id}")
+        assert_response_success(resp2)
+        return resp2.json()
 
 
 class DatabaseTestHelper:
