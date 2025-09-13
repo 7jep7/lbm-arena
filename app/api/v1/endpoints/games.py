@@ -146,25 +146,24 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
         status_value = incoming_status
 
     # Default behavior: for chess games where caller didn't supply a status,
-    # tests expect the game to be immediately playable. If incoming_status is
-    # falsy or 'pending', set to 'in_progress' for chess.
-    if not incoming_status or incoming_status == GameStatus.PENDING.value:
+    # tests expect the game to be immediately playable. Only when the caller
+    # omits a status entirely (falsy) do we default a chess game to in_progress.
+    if not incoming_status:
         if incoming_game_type == "chess":
             status_value = GameStatus.IN_PROGRESS.value
 
     # Ensure the DB gets enum-compatible values: pass Enum members where possible
     db_game = GameModel(
-    game_type=(incoming_game_type if isinstance(incoming_game_type, str) else (incoming_game_type.value if hasattr(incoming_game_type, 'value') else str(incoming_game_type)).lower()),
-    status=(status_value.value if isinstance(status_value, GameStatus) else (status_value if isinstance(status_value, str) else (status_value.value if hasattr(status_value, 'value') else str(status_value)))),
+        game_type=(incoming_game_type if isinstance(incoming_game_type, str) else (incoming_game_type.value if hasattr(incoming_game_type, 'value') else str(incoming_game_type)).lower()),
+        status=(status_value.value if isinstance(status_value, GameStatus) else (status_value if isinstance(status_value, str) else (status_value.value if hasattr(status_value, 'value') else str(status_value)))),
         player1_id=player1_id,
         player2_id=player2_id,
         initial_state=initial_state,
         current_state=initial_state,
         result=None
     )
+    # Add game and related players via relationship to avoid flushing/add races
     db.add(db_game)
-    # flush to obtain primary key, avoid committing until players added
-    db.flush()
     # Ensure JSON fields are returned as dicts for response serialization
     # Preserve initial/current state values as provided (strings or dicts);
     # the Game model will handle JSON conversion where appropriate.
@@ -174,7 +173,7 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
 
     for i, player_id in enumerate(player_ids):
         game_player = GamePlayerModel(
-            game_id=db_game.id,
+            game=db_game,
             player_id=player_id,
             position=positions[i]
         )
@@ -354,6 +353,7 @@ def add_move_compat(game_id: int, payload: dict, db: Session = Depends(get_db)):
         'time_taken': move_data.get('time_taken'),
         'analysis': move_data.get('analysis')
     }
+    # Compute move_number if omitted by counting existing moves
     if move_data.get('move_number') is not None:
         try:
             mn = int(move_data.get('move_number'))
@@ -361,6 +361,15 @@ def add_move_compat(game_id: int, payload: dict, db: Session = Depends(get_db)):
                 mc_kwargs['move_number'] = mn
         except Exception:
             pass
+    else:
+        # Determine next move_number from DB via a light query
+        try:
+            existing = db.query(MoveModel).filter(MoveModel.game_id == game_id).count()
+            mc_kwargs['move_number'] = existing + 1
+        except Exception:
+            mc_kwargs['move_number'] = 1
+    # Provide structured move_data to MoveCreate so chess_service can use it
+    mc_kwargs['move_data'] = move_data.get('move_data') or {}
     # If move_number omitted, leave as None so MoveCreate accepts it; add_move will compute it
     # Construct Pydantic model; allow missing move_notation (now optional)
     mc = MoveCreate(**mc_kwargs)

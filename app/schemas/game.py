@@ -72,7 +72,7 @@ class GameCreate(GameBase):
     # Allow clients/tests to omit `status` and/or `players` and instead provide
     # `player_ids`. This makes the API more flexible for test helpers that
     # sometimes send only `player_ids`.
-    status: Optional[str] = "pending"
+    status: str = "pending"
     players: Optional[List[GamePlayerCreate]] = None
     # tests & endpoints expect list of raw player ids sometimes
     player_ids: Optional[List[int]] = None
@@ -84,35 +84,25 @@ class GameCreate(GameBase):
 
     @root_validator(pre=True)
     def ensure_players_or_ids(cls, values):
-        # Accept either `players` (detailed) or `player_ids` (compact). If only
-        # `players` provided, derive `player_ids` so downstream code can rely on
-        # that field. If both are missing or empty, attach error to `players`
-        # so tests receive a field-level error location.
+        # Only derive player_ids when players provided; don't raise here so
+        # field-level validators can surface proper field locations.
         players = values.get('players')
         player_ids = values.get('player_ids')
 
-        # If game_type is not provided, prefer letting Pydantic raise the
-        # missing-field error for `game_type` rather than raising a
-        # players-specific error. This ensures tests that call `GameCreate()`
-        # with no args get 'game_type' in the error locations.
-        if 'game_type' not in values:
-            return values
-
-        if (players is None or (isinstance(players, list) and len(players) == 0)) and (player_ids is None or len(player_ids) == 0):
-            # Raise a field-specific validation error so tests see 'players' in locations
-            from pydantic import ValidationError
-            from pydantic.error_wrappers import ErrorWrapper
-            raise ValidationError([ErrorWrapper(ValueError('players must not be empty'), loc='players')], cls)
-
-        # Derive player_ids when only players provided
-        if (player_ids is None or len(player_ids) == 0) and players:
+        if (player_ids is None or len(player_ids or []) == 0) and players:
             try:
                 values['player_ids'] = [p.get('player_id') if isinstance(p, dict) else p.player_id for p in players]
             except Exception:
-                # Fallback: leave as-is and let later validation surface issues
                 pass
 
         return values
+
+    @validator('players', pre=True, always=True)
+    def validate_players_present(cls, v, values):
+        player_ids = values.get('player_ids')
+        if (v is None or (isinstance(v, list) and len(v) == 0)) and (player_ids is None or len(player_ids or []) == 0):
+            raise ValueError('players must not be empty')
+        return v
 
 class GameUpdate(CompatBaseModel):
     status: Optional[str] = None
@@ -151,7 +141,7 @@ class GameResponse(Game):
 # ---------------------------------------------------------------------------
 class MoveCreate(CompatBaseModel):
     player_id: int
-    move_number: Optional[int]
+    move_number: int
     # Accept optional move_notation so compatibility wrapper may omit it when
     # move data is passed as structured `move_data` (e.g. poker actions).
     move_notation: Optional[str]

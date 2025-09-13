@@ -176,9 +176,9 @@ class ChessService:
         state = {
             "fen": fen,
             "board_fen": fen,
-            # Use short turn labels for protocol ('w'/'b') while keeping
-            # a human-readable variant for helpers/tests.
-            "turn": "w" if board.turn == chess.WHITE else "b",
+            # Use readable turn values for internal services/tests; API
+            # endpoints can map to short 'w'/'b' if needed.
+            "turn": "white" if board.turn == chess.WHITE else "black",
             "turn_readable": "white" if board.turn == chess.WHITE else "black",
             "castling": parts[2] if len(parts) > 2 else "",
             "en_passant": parts[3] if len(parts) > 3 and parts[3] != '-' else None,

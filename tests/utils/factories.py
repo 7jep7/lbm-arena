@@ -55,9 +55,7 @@ class PlayerFactory:
     ) -> Dict[str, Any]:
         """Create a human player data dictionary"""
         display = display_name if display_name is not None else fake_name()
-        # Keep display names within typical DB limits to avoid DataError in tests
-        if display is not None and len(display) > 255:
-            display = display[:255]
+        # Allow very long display names in tests (some tests exercise extremes)
 
         return {
             "display_name": display,

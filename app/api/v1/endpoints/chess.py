@@ -46,10 +46,14 @@ def get_chess_state(game_id: int, db: Session = Depends(get_db)):
         current_state = json.loads(game.current_state) if isinstance(game.current_state, str) else game.current_state
     except Exception:
         current_state = chess_service.create_new_game()
-    # Provide minimal chess state info
+    # Provide minimal chess state info. Tests expect short 'turn' values.
+    turn_readable = current_state.get("turn")
+    short_turn = None
+    if isinstance(turn_readable, str):
+        short_turn = 'w' if turn_readable.lower().startswith('w') else 'b'
     return {
         "board_fen": current_state.get("board_fen"),
-        "turn": current_state.get("turn"),
+        "turn": short_turn,
         "status": current_state.get("status", game.status.value if hasattr(game.status, 'value') else str(game.status))
     }
 
