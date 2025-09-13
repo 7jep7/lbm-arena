@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -12,6 +12,7 @@ class GameType(str, enum.Enum):
 class GameStatus(str, enum.Enum):
     WAITING = "waiting"  # Added to match tests
     IN_PROGRESS = "in_progress"
+    PAUSED = "paused"
     COMPLETED = "completed"
     ABORTED = "aborted"
 
@@ -22,14 +23,18 @@ class Game(Base):
     __tablename__ = "games"
     
     id = Column(Integer, primary_key=True, index=True)
-    # Use plain strings to avoid DB enum type mismatches across environments.
-    game_type = Column(String(50), nullable=False)
-    status = Column(String(50), default=GameStatus.WAITING.value)
+    # Store game_type and status as normalized lowercase strings. This
+    # avoids SQLAlchemy Enum lookup failures when older DB rows contain
+    # legacy enum names (e.g. 'CHESS') while still allowing code to use
+    # the GameType/GameStatus enums elsewhere.
+    game_type = Column(String, nullable=False)
+    status = Column(String, default=GameStatus.WAITING.value)
     player1_id = Column(Integer, ForeignKey("players.id"), nullable=False)
     player2_id = Column(Integer, ForeignKey("players.id"), nullable=False)
-    # Store JSON as text for existing DB, but expose dict interface via properties
-    initial_state_raw = Column("initial_state", Text, nullable=True)
-    current_state_raw = Column("current_state", Text, nullable=True)
+    # Store JSON as native JSON/JSONB where available; properties keep
+    # compatibility with string inputs and outputs.
+    initial_state_raw = Column("initial_state", JSON, nullable=True)
+    current_state_raw = Column("current_state", JSON, nullable=True)
     winner_id = Column(Integer, ForeignKey("players.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
@@ -49,45 +54,52 @@ class Game(Base):
     def initial_state(self):  # type: ignore
         if self.initial_state_raw is None:
             return None
-        # If the raw stored value is already a dict/list, return it. If it's a
-        # string, attempt to parse JSON and return the parsed object. Tests and
-        # consumers expect dict/list types from the property.
+        # If the DB returns a structured object already, return it. If it's a
+        # string (rare), parse JSON; otherwise return as-is.
         if isinstance(self.initial_state_raw, (dict, list)):
             return self.initial_state_raw
-        try:
-            return json.loads(self.initial_state_raw)
-        except Exception:
-            return self.initial_state_raw
+        # If a string looks like JSON, try parsing, otherwise return string as-is
+        if isinstance(self.initial_state_raw, str):
+            try:
+                parsed = json.loads(self.initial_state_raw)
+                return parsed
+            except Exception:
+                return self.initial_state_raw
+        return self.initial_state_raw
 
     @initial_state.setter
     def initial_state(self, value):  # type: ignore
         if value is None:
             self.initial_state_raw = None
         elif isinstance(value, (dict, list)):
-            self.initial_state_raw = json.dumps(value)
+            # Assign structured JSON directly for JSONB column
+            self.initial_state_raw = value
         else:
+            # Preserve strings as-is (tests sometimes expect string state values)
             self.initial_state_raw = value
 
     @property
     def current_state(self):  # type: ignore
         if self.current_state_raw is None:
             return None
-        # Parse JSON text into dict/list for consumers/tests; if parsing fails
-        # return the raw stored value.
         if isinstance(self.current_state_raw, (dict, list)):
             return self.current_state_raw
-        try:
-            return json.loads(self.current_state_raw)
-        except Exception:
-            return self.current_state_raw
+        if isinstance(self.current_state_raw, str):
+            try:
+                parsed = json.loads(self.current_state_raw)
+                return parsed
+            except Exception:
+                return self.current_state_raw
+        return self.current_state_raw
 
     @current_state.setter
     def current_state(self, value):  # type: ignore
         if value is None:
             self.current_state_raw = None
         elif isinstance(value, (dict, list)):
-            self.current_state_raw = json.dumps(value)
+            self.current_state_raw = value
         else:
+            # Preserve strings as-is
             self.current_state_raw = value
 
     # Represent `result` via the JSON `current_state` so we don't require a DB schema migration
@@ -108,20 +120,21 @@ class Game(Base):
         else:
             cs['result'] = value
         self.current_state = cs
-
     # Backward compatibility for tests expecting game.players iterable
     @property
     def players(self):
         players = []
+        # player1 -> 'white' for chess, 'player1' otherwise
         if self.player1 is not None:
             players.append({
                 "player_id": self.player1.id,
-                "role": "white" if self.game_type == GameType.CHESS.value else "player1"
+                "role": "white" if (self.game_type == GameType.CHESS.value) else "player1"
             })
+        # player2 -> 'black' for chess, 'player2' otherwise
         if self.player2 is not None:
             players.append({
                 "player_id": self.player2.id,
-                "role": "black" if self.game_type == GameType.CHESS.value else "player2"
+                "role": "black" if (self.game_type == GameType.CHESS.value) else "player2"
             })
         # Also include any additional GamePlayer rows (e.g., poker with >2 players)
         if self.game_players:

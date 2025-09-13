@@ -13,7 +13,8 @@ chess_service = ChessService()
 
 @router.get("/")
 def chess_info(db: Session = Depends(get_db)):
-    games = db.query(GameModel).filter(GameModel.game_type == GameType.CHESS).all()
+    # GameModel.game_type stored as lowercase string; compare using enum value
+    games = db.query(GameModel).filter(GameModel.game_type == GameType.CHESS.value).all()
     serialized_games = [
         {"id": g.id, "status": g.status.value if hasattr(g.status, 'value') else g.status}
         for g in games
@@ -33,8 +34,8 @@ def _get_chess_game_or_error(game_id: int, db: Session) -> GameModel:
     game = db.query(GameModel).filter(GameModel.id == game_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    game_type_value = game.game_type.value if hasattr(game.game_type, 'value') else str(game.game_type)
-    if game_type_value != GameType.CHESS.value:
+    game_type_value = getattr(game, 'game_type', None)
+    if (game_type_value is None) or (str(game_type_value).lower() != GameType.CHESS.value):
         raise HTTPException(status_code=400, detail="Game is not a chess game")
     return game
 

@@ -158,7 +158,7 @@ class GameFactory:
         if initial_state is None:
             initial_state = {
                 "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                "turn": "white",
+                "turn": "w",
                 "castling": "KQkq",
                 "en_passant": None,
                 "halfmove": 0,

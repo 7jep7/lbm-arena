@@ -176,8 +176,9 @@ class ChessService:
         state = {
             "fen": fen,
             "board_fen": fen,
-            # Use readable turn values expected by tests
-            "turn": "white" if board.turn == chess.WHITE else "black",
+            # Use short turn labels for protocol ('w'/'b') while keeping
+            # a human-readable variant for helpers/tests.
+            "turn": "w" if board.turn == chess.WHITE else "b",
             "turn_readable": "white" if board.turn == chess.WHITE else "black",
             "castling": parts[2] if len(parts) > 2 else "",
             "en_passant": parts[3] if len(parts) > 3 and parts[3] != '-' else None,

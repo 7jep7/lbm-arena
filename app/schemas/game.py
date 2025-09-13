@@ -86,12 +86,23 @@ class GameCreate(GameBase):
     def ensure_players_or_ids(cls, values):
         # Accept either `players` (detailed) or `player_ids` (compact). If only
         # `players` provided, derive `player_ids` so downstream code can rely on
-        # that field. This avoids Pydantic field-validator ordering issues.
+        # that field. If both are missing or empty, attach error to `players`
+        # so tests receive a field-level error location.
         players = values.get('players')
         player_ids = values.get('player_ids')
 
+        # If game_type is not provided, prefer letting Pydantic raise the
+        # missing-field error for `game_type` rather than raising a
+        # players-specific error. This ensures tests that call `GameCreate()`
+        # with no args get 'game_type' in the error locations.
+        if 'game_type' not in values:
+            return values
+
         if (players is None or (isinstance(players, list) and len(players) == 0)) and (player_ids is None or len(player_ids) == 0):
-            raise ValueError('players must not be empty')
+            # Raise a field-specific validation error so tests see 'players' in locations
+            from pydantic import ValidationError
+            from pydantic.error_wrappers import ErrorWrapper
+            raise ValidationError([ErrorWrapper(ValueError('players must not be empty'), loc='players')], cls)
 
         # Derive player_ids when only players provided
         if (player_ids is None or len(player_ids) == 0) and players:
@@ -140,8 +151,10 @@ class GameResponse(Game):
 # ---------------------------------------------------------------------------
 class MoveCreate(CompatBaseModel):
     player_id: int
-    move_number: int
-    move_notation: str
+    move_number: Optional[int]
+    # Accept optional move_notation so compatibility wrapper may omit it when
+    # move data is passed as structured `move_data` (e.g. poker actions).
+    move_notation: Optional[str]
     position_before: Optional[str] = None
     position_after: Optional[str] = None
     time_taken: Optional[float] = None
@@ -149,6 +162,8 @@ class MoveCreate(CompatBaseModel):
 
     @validator('move_number')
     def validate_move_number(cls, v):
+        if v is None:
+            return v
         if v <= 0:
             raise ValueError('move_number must be positive')
         return v
