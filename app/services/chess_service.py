@@ -176,9 +176,8 @@ class ChessService:
         state = {
             "fen": fen,
             "board_fen": fen,
-            # `turn` uses short codes for tests ('w'/'b'), keep readable form
-            # in `turn_readable` for backward compatibility.
-            "turn": 'w' if board.turn == chess.WHITE else 'b',
+            # Use readable turn values expected by tests
+            "turn": "white" if board.turn == chess.WHITE else "black",
             "turn_readable": "white" if board.turn == chess.WHITE else "black",
             "castling": parts[2] if len(parts) > 2 else "",
             "en_passant": parts[3] if len(parts) > 3 and parts[3] != '-' else None,

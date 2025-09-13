@@ -50,12 +50,14 @@ class Game(Base):
         if self.initial_state_raw is None:
             return None
         # If the raw stored value is already a dict/list, return it. If it's a
-        # string, return the raw string unchanged so database tests can compare
-        # literal JSON strings. Consumers that need a parsed dict should call
-        # `json.loads(...)` themselves.
+        # string, attempt to parse JSON and return the parsed object. Tests and
+        # consumers expect dict/list types from the property.
         if isinstance(self.initial_state_raw, (dict, list)):
             return self.initial_state_raw
-        return self.initial_state_raw
+        try:
+            return json.loads(self.initial_state_raw)
+        except Exception:
+            return self.initial_state_raw
 
     @initial_state.setter
     def initial_state(self, value):  # type: ignore
@@ -70,10 +72,14 @@ class Game(Base):
     def current_state(self):  # type: ignore
         if self.current_state_raw is None:
             return None
-        # Preserve raw string form for DB-level tests that compare JSON text.
+        # Parse JSON text into dict/list for consumers/tests; if parsing fails
+        # return the raw stored value.
         if isinstance(self.current_state_raw, (dict, list)):
             return self.current_state_raw
-        return self.current_state_raw
+        try:
+            return json.loads(self.current_state_raw)
+        except Exception:
+            return self.current_state_raw
 
     @current_state.setter
     def current_state(self, value):  # type: ignore
