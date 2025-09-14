@@ -3,6 +3,7 @@ import anthropic
 from typing import Optional, Dict, Any, List
 import json
 import time
+import re
 from app.core.config import settings
 
 class LLMService:
@@ -39,6 +40,56 @@ class LLMService:
             parsed['action'] = 'fold'
         return parsed
 
+    async def generate_tictactoe_move(self, game_state: Dict[str, Any], player: Dict[str, Any]) -> Dict[str, Any]:
+        prompt = self.format_tictactoe_prompt(game_state, player)
+        provider = player.get('provider') or 'openai'
+        model = player.get('model_id') or 'gpt-4'
+        try:
+            response = await self._call_llm_api(provider, model, prompt)
+        except Exception:
+            return {"row": 0, "col": 0, "reasoning": "Fallback move"}
+        return self.parse_tictactoe_response(response if isinstance(response, str) else json.dumps(response))
+
+    async def generate_gi_questions(self, seed_prompt: str, player: Dict[str, Any]) -> List[str]:
+        prompt = self.format_gi_question_prompt(seed_prompt, player)
+        provider = player.get('provider') or 'openai'
+        model = player.get('model_id') or 'gpt-4'
+        try:
+            response = await self._call_llm_api(provider, model, prompt)
+        except Exception:
+            return ["What are the key implications of this topic?", "How might this affect society?"]
+        return self.parse_gi_questions_response(response if isinstance(response, str) else json.dumps(response))
+
+    async def generate_gi_answer(self, question: str, player: Dict[str, Any]) -> str:
+        prompt = self.format_gi_answer_prompt(question, player)
+        provider = player.get('provider') or 'openai'
+        model = player.get('model_id') or 'gpt-4'
+        try:
+            response = await self._call_llm_api(provider, model, prompt)
+        except Exception:
+            return "This is a complex question that requires careful consideration of multiple factors."
+        return self.parse_gi_answer_response(response if isinstance(response, str) else json.dumps(response))
+
+    async def generate_gi_score(self, question: str, answer: str, player: Dict[str, Any]) -> int:
+        prompt = self.format_gi_scoring_prompt(question, answer, player)
+        provider = player.get('provider') or 'openai'
+        model = player.get('model_id') or 'gpt-4'
+        try:
+            response = await self._call_llm_api(provider, model, prompt)
+        except Exception:
+            return 7  # Default score
+        return self.parse_gi_score_response(response if isinstance(response, str) else json.dumps(response))
+
+    async def generate_sfc_solution(self, challenge: Dict[str, Any], player: Dict[str, Any]) -> Dict[str, Any]:
+        prompt = self.format_sfc_prompt(challenge, player)
+        provider = player.get('provider') or 'openai'
+        model = player.get('model_id') or 'gpt-4'
+        try:
+            response = await self._call_llm_api(provider, model, prompt)
+        except Exception:
+            return {"code_text": "PROGRAM Default\nEND_PROGRAM", "description": "Fallback solution"}
+        return self.parse_sfc_response(response if isinstance(response, str) else json.dumps(response))
+
     async def analyze_position(self, position: str, game_type: str) -> Dict[str, Any]:
         prompt = f"Analyze this {game_type} position: {position}\nProvide evaluation and best moves." if game_type == 'chess' else position
         try:
@@ -69,6 +120,70 @@ class LLMService:
             f"Community: {', '.join(game_state.get('community_cards', []))}\n"
             f"Pot: {game_state.get('pot')}\n"
             "Respond JSON {\"action\": \"call|raise|fold|check|all_in\", \"amount\": optional, \"reasoning\": \"...\"}."
+        )
+
+    def format_tictactoe_prompt(self, game_state: Dict[str, Any], player: Dict[str, Any]) -> str:
+        board = game_state.get('board', [])
+        current_player = game_state.get('current_player', 'X')
+        
+        # Format board for display
+        board_str = ""
+        for i, row in enumerate(board):
+            board_str += " | ".join([cell if cell else " " for cell in row])
+            if i < len(board) - 1:
+                board_str += "\n---------\n"
+        
+        return (
+            f"You are playing tic-tac-toe as {current_player} for player {player.get('display_name','AI')}\n"
+            f"Current board:\n{board_str}\n"
+            f"You are playing as '{current_player}'. Choose your move.\n"
+            "Respond with JSON {\"row\": 0, \"col\": 1, \"reasoning\": \"...\"} where row and col are 0-2."
+        )
+
+    def format_gi_question_prompt(self, seed_prompt: str, player: Dict[str, Any]) -> str:
+        return (
+            f"You are {player.get('display_name','AI')} participating in a General Intelligence tournament.\n"
+            f"Seed prompt: {seed_prompt}\n"
+            "Generate 2-3 thoughtful, challenging questions based on this seed prompt that will test "
+            "other AI systems' reasoning and knowledge. The questions should be specific enough to "
+            "allow for meaningful comparison of answers.\n"
+            "Respond with JSON {\"questions\": [\"question1\", \"question2\", \"question3\"]}."
+        )
+
+    def format_gi_answer_prompt(self, question: str, player: Dict[str, Any]) -> str:
+        return (
+            f"You are {player.get('display_name','AI')} in a General Intelligence tournament.\n"
+            f"Question: {question}\n"
+            "Provide a comprehensive, well-reasoned answer that demonstrates deep understanding "
+            "and critical thinking. Your answer will be scored by other AI systems on a scale of 0-10.\n"
+            "Respond with JSON {\"answer\": \"your detailed answer here\"}."
+        )
+
+    def format_gi_scoring_prompt(self, question: str, answer: str, player: Dict[str, Any]) -> str:
+        return (
+            f"You are {player.get('display_name','AI')} scoring answers in a General Intelligence tournament.\n"
+            f"Question: {question}\n"
+            f"Answer to score: {answer}\n"
+            "Score this answer on a scale of 0-10 based on:\n"
+            "- Accuracy and factual correctness (0-3 points)\n"
+            "- Depth of reasoning and insight (0-3 points)\n"
+            "- Clarity and communication (0-2 points)\n"
+            "- Creativity and originality (0-2 points)\n"
+            "Be fair and objective in your scoring.\n"
+            "Respond with JSON {\"score\": 8, \"reasoning\": \"explanation of your scoring\"}."
+        )
+
+    def format_sfc_prompt(self, challenge: Dict[str, Any], player: Dict[str, Any]) -> str:
+        return (
+            f"You are {player.get('display_name','AI')} solving an SFC (Sequential Function Charts) programming challenge.\n"
+            f"Challenge: {challenge.get('title', 'SFC Programming Challenge')}\n"
+            f"Description: {challenge.get('description', '')}\n"
+            f"Requirements: {', '.join(challenge.get('requirements', []))}\n"
+            f"Available inputs: {', '.join(challenge.get('inputs', []))}\n"
+            f"Required outputs: {', '.join(challenge.get('outputs', []))}\n"
+            "Create a complete SFC program that meets all requirements. Your solution will be "
+            "evaluated on syntax correctness, logic implementation, and requirements compliance.\n"
+            "Respond with JSON {\"code_text\": \"your SFC program here\", \"description\": \"explanation of your solution\"}."
         )
 
     def parse_chess_response(self, response: str) -> Dict[str, Any]:
@@ -107,8 +222,115 @@ class LLMService:
                 return {"action": action, "amount": amount, "reasoning": response[:120]}
         return {"action": "fold", "reasoning": response[:120]}
 
+    def parse_tictactoe_response(self, response: str) -> Dict[str, Any]:
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict) and 'row' in data and 'col' in data:
+                row = int(data['row'])
+                col = int(data['col'])
+                if 0 <= row <= 2 and 0 <= col <= 2:
+                    return data
+        except Exception:
+            pass
+        
+        # Heuristic parsing
+        import re
+        numbers = re.findall(r'\d+', response)
+        if len(numbers) >= 2:
+            try:
+                row = int(numbers[0]) % 3  # Ensure valid range
+                col = int(numbers[1]) % 3
+                return {"row": row, "col": col, "reasoning": response[:120]}
+            except Exception:
+                pass
+        
+        return {"row": 0, "col": 0, "reasoning": response[:120]}
+
+    def parse_gi_questions_response(self, response: str) -> List[str]:
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict) and 'questions' in data:
+                questions = data['questions']
+                if isinstance(questions, list) and all(isinstance(q, str) for q in questions):
+                    return questions
+        except Exception:
+            pass
+        
+        # Heuristic parsing - look for numbered lists or bullet points
+        lines = response.split('\n')
+        questions = []
+        for line in lines:
+            line = line.strip()
+            if line and ('?' in line or len(line) > 20):
+                # Clean up common prefixes
+                line = re.sub(r'^\d+\.\s*', '', line)
+                line = re.sub(r'^[-*]\s*', '', line)
+                if line.endswith('?') or len(line) > 30:
+                    questions.append(line)
+        
+        # Return at least 2 questions
+        if len(questions) < 2:
+            questions = [
+                "What are the key implications of this topic?",
+                "How might this concept affect future developments?"
+            ]
+        
+        return questions[:3]  # Limit to 3 questions
+
+    def parse_gi_answer_response(self, response: str) -> str:
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict) and 'answer' in data:
+                return str(data['answer'])
+        except Exception:
+            pass
+        
+        # Return the response as-is if JSON parsing fails
+        return response
+
+    def parse_gi_score_response(self, response: str) -> int:
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict) and 'score' in data:
+                score = int(data['score'])
+                return max(0, min(10, score))  # Clamp to 0-10 range
+        except Exception:
+            pass
+        
+        # Heuristic parsing - look for numbers
+        import re
+        numbers = re.findall(r'\b([0-9]|10)\b', response)
+        if numbers:
+            try:
+                score = int(numbers[0])
+                return max(0, min(10, score))
+            except Exception:
+                pass
+        
+        return 7  # Default score
+
+    def parse_sfc_response(self, response: str) -> Dict[str, Any]:
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict) and 'code_text' in data:
+                return {
+                    "code_text": str(data['code_text']),
+                    "description": str(data.get('description', '')),
+                    "reasoning": response[:120]
+                }
+        except Exception:
+            pass
+        
+        # Heuristic parsing - assume the whole response is code if JSON parsing fails
+        return {
+            "code_text": response,
+            "description": "Generated SFC solution",
+            "reasoning": "Parsed from raw response"
+        }
+
     # ------------------------------------------------------------------
     # Config validation / rate limiting / caching
+    # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     def validate_config(self, config: Dict[str, Any]) -> bool:
         provider = config.get('provider')

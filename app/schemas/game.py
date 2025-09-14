@@ -56,7 +56,7 @@ class GamePlayer(CompatBaseModel):  # Backward compatibility with existing usage
 
 ALLOWED_RESULTS = {"win", "loss", "draw", "aborted", None}
 
-ALLOWED_GAME_TYPES = {"chess", "poker"}
+ALLOWED_GAME_TYPES = {"chess", "poker", "tictactoe", "gi", "sfc"}
 ALLOWED_STATUSES = {"pending", "in_progress", "completed", "aborted", "waiting"}
 
 class GameBase(CompatBaseModel):

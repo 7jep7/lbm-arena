@@ -8,6 +8,9 @@ from app.core.database import Base
 class GameType(str, enum.Enum):
     CHESS = "chess"
     POKER = "poker"
+    TICTACTOE = "tictactoe"
+    GI = "gi"  # General Intelligence
+    SFC = "sfc"  # Sequential Function Charts
 
 
 class GameStatus(str, enum.Enum):
