@@ -1,12 +1,13 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy import Column, String, Boolean, DateTime, Text, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from uuid import uuid4
 
 class Player(Base):
     __tablename__ = "players"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid4()))
     is_human = Column(Boolean, default=False, nullable=False)
     display_name = Column(Text, nullable=False)
     provider = Column(String(100), nullable=True)  # openai, anthropic, etc.

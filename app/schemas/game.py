@@ -1,5 +1,5 @@
 from pydantic import BaseModel, validator, Field, root_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from app.models.game import GameType, GameStatus
 from app.schemas.player import Player
@@ -16,13 +16,13 @@ class CompatBaseModel(BaseModel):
         return cls(**data)
 
 class GamePlayerCreate(CompatBaseModel):
-    player_id: int
+    player_id: Union[str, int]
     role: str  # e.g. white/black/player_0
 
     @validator('player_id')
     def validate_player_id(cls, v):
-        if not isinstance(v, int):
-            raise TypeError('player_id must be int')
+        if not isinstance(v, (int, str)):
+            raise TypeError('player_id must be int or str')
         return v
 
     @validator('role')
@@ -32,17 +32,17 @@ class GamePlayerCreate(CompatBaseModel):
         return v
 
 class GamePlayerResponse(GamePlayerCreate):
-    id: int
-    game_id: int
+    id: Union[str, int]
+    game_id: Union[str, int]
     # Accept a nested Player schema so Pydantic will coerce raw dicts into
     # a `Player` model instance. Tests expect attribute access (e.g. player.id)
     # rather than a plain dict.
     player: Optional[Player] = None
 
 class GamePlayer(CompatBaseModel):  # Backward compatibility with existing usages
-    id: int
-    game_id: int
-    player_id: int
+    id: Union[str, int]
+    game_id: Union[str, int]
+    player_id: Union[str, int]
     position: str
     elo_before: Optional[int] = None
     elo_after: Optional[int] = None
@@ -75,7 +75,7 @@ class GameCreate(GameBase):
     status: str = "pending"
     players: Optional[List[GamePlayerCreate]] = None
     # tests & endpoints expect list of raw player ids sometimes
-    player_ids: Optional[List[int]] = None
+    player_ids: Optional[List[Union[str, int]]] = None
     @validator('status')
     def validate_status(cls, v):
         if v not in ALLOWED_STATUSES:
@@ -108,7 +108,7 @@ class GameUpdate(CompatBaseModel):
     status: Optional[str] = None
     result: Optional[str] = None
     current_state: Optional[Dict[str, Any]] = None
-    winner_id: Optional[int] = None
+    winner_id: Optional[Union[str, int]] = None
 
     @validator('result')
     def validate_result(cls, v):
@@ -117,7 +117,7 @@ class GameUpdate(CompatBaseModel):
         return v
 
 class Game(CompatBaseModel):
-    id: int
+    id: Union[str, int]
     game_type: str
     # Make initial/current state optional for serialization tests that don't
     # include full state payloads.
@@ -125,7 +125,7 @@ class Game(CompatBaseModel):
     current_state: Optional[Dict[str, Any]] = None
     status: str
     result: Optional[str] = None
-    winner_id: Optional[int] = None
+    winner_id: Optional[Union[str, int]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     players: List[GamePlayerResponse] = []
@@ -140,7 +140,7 @@ class GameResponse(Game):
 # Move schemas
 # ---------------------------------------------------------------------------
 class MoveCreate(CompatBaseModel):
-    player_id: int
+    player_id: Union[str, int]
     move_number: int
     # Accept optional move_notation so compatibility wrapper may omit it when
     # move data is passed as structured `move_data` (e.g. poker actions).
@@ -171,9 +171,9 @@ class MoveUpdate(CompatBaseModel):
     time_taken: Optional[float] = None
 
 class Move(CompatBaseModel):
-    id: int
-    game_id: int
-    player_id: int
+    id: Union[str, int]
+    game_id: Union[str, int]
+    player_id: Union[str, int]
     move_number: int
     move_notation: str
     position_before: Optional[str] = None

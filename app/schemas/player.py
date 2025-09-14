@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, StrictStr, StrictBool, validator
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
 
 class CompatBaseModel(BaseModel):
@@ -31,7 +31,7 @@ class PlayerUpdate(CompatBaseModel):
     model_id: Optional[str] = None
 
 class Player(PlayerBase):
-    id: int
+    id: Union[str, int]
     elo_chess: int
     elo_poker: int
     created_at: datetime

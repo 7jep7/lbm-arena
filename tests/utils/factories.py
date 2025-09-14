@@ -8,6 +8,7 @@ Factories help create consistent, realistic test data with minimal boilerplate.
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import random
+from uuid import uuid4
 import json
 import types
 
@@ -131,12 +132,12 @@ class PlayerFactory:
         # Return a simple attribute-accessible object for tests that expect
         # .id / .display_name style access instead of a raw dict.
         # Add minimal identity and timestamps used in schema tests
-        full = dict(data)
-        # avoid deterministic duplicate ids in tests that persist multiple
-        full.setdefault('id', random.randint(1000, 10 ** 9))
-        full.setdefault('created_at', datetime.now())
-        full.setdefault('updated_at', None)
-        return AttrDict(**full)
+            full = dict(data)
+            # avoid deterministic duplicate ids in tests that persist multiple
+            full.setdefault('id', str(uuid4()))
+            full.setdefault('created_at', datetime.now())
+            full.setdefault('updated_at', None)
+            return AttrDict(**full)
 
 
 class GameFactory:
@@ -247,7 +248,7 @@ class GameFactory:
 
         from datetime import datetime
         full = dict(data)
-        full.setdefault('id', 1)
+        full.setdefault('id', str(uuid4()))
         full.setdefault('result', None)
         full.setdefault('winner_id', None)
         full.setdefault('created_at', datetime.now())
@@ -341,9 +342,9 @@ class MoveFactory:
         """Compatibility helper returning an AttrDict for a single move."""
         data = MoveFactory.create_chess_move(**kwargs)
         # Ensure fields commonly expected by schema/tests exist
-        data.setdefault('id', random.randint(1000, 10 ** 9))
-        data.setdefault('game_id', data.get('game_id', 1))
-        data.setdefault('player_id', data.get('player_id', 1))
+        data.setdefault('id', str(uuid4()))
+        data.setdefault('game_id', data.get('game_id', str(uuid4())))
+        data.setdefault('player_id', data.get('player_id', str(uuid4())))
         data.setdefault('move_number', data.get('move_number', 1))
         data.setdefault('move_notation', data.get('move_notation', 'e4'))
         data.setdefault('position_before', None)

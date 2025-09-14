@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, JSON, String
+from sqlalchemy import Column, DateTime, ForeignKey, JSON, String, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 from app.core.database import Base
+from uuid import uuid4
 
 
 class GameType(str, enum.Enum):
@@ -25,15 +26,15 @@ class GameStatus(str, enum.Enum):
 class Game(Base):
     __tablename__ = "games"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid4()))
     # Use plain string columns for enums to avoid native enum compatibility issues
     game_type = Column(String(50), nullable=False)
     status = Column(String(50), default=GameStatus.WAITING.value)
-    player1_id = Column(Integer, ForeignKey("players.id"), nullable=False)
-    player2_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    player1_id = Column(String(36), ForeignKey("players.id"), nullable=False)
+    player2_id = Column(String(36), ForeignKey("players.id"), nullable=False)
     initial_state_raw = Column("initial_state", JSON, nullable=True)
     current_state_raw = Column("current_state", JSON, nullable=True)
-    winner_id = Column(Integer, ForeignKey("players.id"), nullable=True)
+    winner_id = Column(String(36), ForeignKey("players.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
@@ -43,6 +44,8 @@ class Game(Base):
     winner = relationship("Player", foreign_keys=[winner_id])
     moves = relationship("Move", back_populates="game", cascade="all, delete-orphan")
     game_players = relationship("GamePlayer", back_populates="game", cascade="all, delete-orphan")
+    # Rounds (for multi-round games like poker)
+    rounds = relationship("Round", back_populates="game", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Game(id={self.id}, type='{self.game_type}', status='{self.status}')>"
